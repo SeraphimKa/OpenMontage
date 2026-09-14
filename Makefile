@@ -3,10 +3,13 @@ VENV_DIR ?= .venv
 BASE_PYTHON ?= $(shell command -v python$(PYTHON_VERSION) 2>/dev/null || command -v python3 2>/dev/null || command -v python 2>/dev/null)
 RUN_PYTHON = $(shell for dir in "$$VIRTUAL_ENV" "$$CONDA_PREFIX" "$(VENV_DIR)"; do if [ -n "$$dir" ] && [ -x "$$dir/bin/python" ]; then printf "%s/bin/python" "$$dir"; exit 0; elif [ -n "$$dir" ] && [ -x "$$dir/Scripts/python.exe" ]; then printf "%s/Scripts/python.exe" "$$dir"; exit 0; fi; done; if [ "$(OS)" = "Windows_NT" ]; then printf "%s/Scripts/python.exe" "$(VENV_DIR)"; else printf "%s/bin/python" "$(VENV_DIR)"; fi)
 PIP = $(RUN_PYTHON) -m pip
+# uv ignores BASE_PYTHON unless told; honour it when given on the command line.
+UV_PYTHON = $(if $(filter command line,$(origin BASE_PYTHON)),$(BASE_PYTHON),$(PYTHON_VERSION))
+UV_PYTHON_LABEL = $(if $(filter command line,$(origin BASE_PYTHON)),$(BASE_PYTHON),Python $(PYTHON_VERSION)+)
 
 .DEFAULT_GOAL := setup
 
-.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv
+.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight piper-voice demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv
 
 # ---- Virtual environment ----
 
@@ -18,8 +21,8 @@ ensure-venv:
 	elif [ -x "$(VENV_DIR)/bin/python" ] || [ -x "$(VENV_DIR)/Scripts/python.exe" ]; then \
 		echo "==> Using existing virtual environment: $(VENV_DIR)"; \
 	elif command -v uv >/dev/null 2>&1; then \
-		echo "==> Creating virtual environment with uv (Python $(PYTHON_VERSION)+): $(VENV_DIR)"; \
-		uv venv --python $(PYTHON_VERSION) "$(VENV_DIR)"; \
+		echo "==> Creating virtual environment with uv ($(UV_PYTHON_LABEL)): $(VENV_DIR)"; \
+		uv venv --python "$(UV_PYTHON)" "$(VENV_DIR)"; \
 	else \
 		if [ -z "$(BASE_PYTHON)" ]; then \
 			echo "ERROR: Python $(PYTHON_VERSION)+ is required, but no python executable was found."; \
@@ -58,8 +61,7 @@ setup: ensure-venv
 	@echo "==> Installing Remotion composer..."
 	cd remotion-composer && npm install
 	@echo ""
-	@echo "==> Installing free offline TTS (Piper)..."
-	$(PIP) install piper-tts || echo "  [skip] piper-tts install failed — TTS will use cloud providers instead"
+	@$(MAKE) --no-print-directory piper-voice
 	@echo ""
 	@echo "==> Installing HyperFrames runtime (cache-warm via npx)..."
 	@echo "    Pulls the 'hyperframes' npm package into the local npx cache so the"
@@ -97,8 +99,16 @@ test-contracts: ensure-venv
 
 # ---- Utilities ----
 
+piper-voice: ensure-venv
+	@echo "==> Downloading default Piper voice (en_US-lessac-medium)..."
+	@if [ -f en_US-lessac-medium.onnx ]; then \
+		echo "    en_US-lessac-medium.onnx already present — skipping."; \
+	else \
+		$(RUN_PYTHON) -m piper.download_voices en_US-lessac-medium || echo "  [skip] Piper voice download failed — run 'make piper-voice' later, or TTS will use cloud providers instead"; \
+	fi
+
 preflight: ensure-venv
-	$(RUN_PYTHON) -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
+	PATH="$$(cd "$$(dirname "$(RUN_PYTHON)")" && pwd):$$PATH" $(RUN_PYTHON) -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
 
 hyperframes-doctor: ensure-venv
 	@echo "==> Probing HyperFrames runtime (node/ffmpeg/npx + hyperframes doctor)..."
