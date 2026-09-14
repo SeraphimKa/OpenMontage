@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/media_licenses",
+  "title": "Media Licence Report",
+  "description": "Every asset a project uses with its licence, licence class, attribution credit and commercial-delivery blockers. Produced by media_license_report.",
+  "type": "object",
+  "required": [
+    "version",
+    "project_id",
+    "generated_at",
+    "summary",
+    "cleared_for_delivery",
+    "blockers",
+    "attribution_credits",
+    "assets",
+    "notes"
+  ],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "project_id": { "type": "string" },
+    "generated_at": { "type": "string", "description": "ISO 8601 timestamp" },
+    "summary": {
+      "type": "object",
+      "required": ["per_class", "total_assets", "used_count", "blockers_count"],
+      "properties": {
+        "per_class": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/license_class" },
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "total_assets": { "type": "integer", "minimum": 0 },
+        "used_count": { "type": "integer", "minimum": 0 },
+        "blockers_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "cleared_for_delivery": {
+      "type": "boolean",
+      "description": "True when no used asset is not_cleared or unknown."
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "scene_id", "path", "license", "license_class", "reason"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "scene_id": { "type": "string" },
+          "path": { "type": "string" },
+          "license": { "type": "string" },
+          "license_class": { "type": "string", "enum": ["not_cleared", "unknown"] },
+          "reason": { "type": "string" },
+          "orphan_reference": {
+            "type": "boolean",
+            "description": "True when the blocker is an edit_decisions reference that matches no asset_manifest entry; id and path then hold the reference string."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "attribution_credits": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "license_class": {
+      "type": "string",
+      "enum": ["cleared", "attribution", "not_cleared", "user_supplied", "generated", "unknown"]
+    },
+    "asset": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "scene_id",
+        "path",
+        "source_tool",
+        "provider",
+        "license",
+        "license_class",
+        "creator",
+        "original_url",
+        "used",
+        "attribution_required",
+        "credit_line"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "scene_id": { "type": "string" },
+        "path": { "type": "string" },
+        "source_tool": { "type": "string" },
+        "provider": { "type": "string" },
+        "license": { "type": "string", "description": "Raw licence string from the asset manifest" },
+        "license_class": { "$ref": "#/$defs/license_class" },
+        "creator": { "type": "string" },
+        "original_url": { "type": "string" },
+        "used": { "type": "boolean" },
+        "attribution_required": { "type": "boolean" },
+        "credit_line": {
+          "type": ["string", "null"],
+          "description": "Copy-paste credit for attribution-class assets; null otherwise"
+        },
+        "license_evidence": { "$ref": "#/$defs/license_evidence" }
+      },
+      "additionalProperties": false
+    },
+    "license_evidence": {
+      "type": "object",
+      "description": "Copied from the asset manifest when license_resolver recorded where the licence was read.",
+      "required": ["url", "method", "matched_text", "fetched_at", "resolver_version"],
+      "properties": {
+        "url": { "type": "string" },
+        "method": { "type": "string", "enum": ["api", "page", "site_policy"] },
+        "matched_text": { "type": "string", "maxLength": 300 },
+        "fetched_at": { "type": "string" },
+        "resolver_version": { "type": "string" },
+        "previous_licenses": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

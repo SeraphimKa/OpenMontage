@@ -42,6 +42,8 @@ class JAXASource:
         "Requires beautifulsoup4: pip install beautifulsoup4"
     )
     supports = {"video": True, "image": True}
+    # search() returns nothing under SearchFilters.commercial_only.
+    licence_gate_excluded = True
 
     def is_available(self) -> bool:
         try:
@@ -51,6 +53,11 @@ class JAXASource:
             return False
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
+        if filters.commercial_only:
+            # JAXA terms are educational/informational use, per item.
+            _log.info("JAXA excluded under commercial_only: educational-use licence")
+            return []
+
         import requests
         from bs4 import BeautifulSoup
 

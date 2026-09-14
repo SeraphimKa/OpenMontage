@@ -26,7 +26,13 @@ from .base import Candidate, SearchFilters
 _log = logging.getLogger(__name__)
 
 _SEARCH_URL = "https://mixkit.co/free-stock-video/"
-_LICENSE = "Mixkit License (free for commercial and personal use, no attribution required)"
+# Mixkit serves both Free-license and "Restricted License" (NON-COMMERCIAL)
+# clips from the same pages; this scraper cannot tell them apart.
+_LICENSE = (
+    "Mixkit License - VERIFY PER ITEM. Free-license clips allow commercial "
+    "use with no attribution, but Restricted-License clips on the same pages "
+    "are non-commercial only."
+)
 
 
 class MixkitSource:
@@ -41,6 +47,8 @@ class MixkitSource:
         "Requires beautifulsoup4: pip install beautifulsoup4"
     )
     supports = {"video": True, "image": False}
+    # search() returns nothing under SearchFilters.commercial_only.
+    licence_gate_excluded = True
 
     def is_available(self) -> bool:
         try:
@@ -50,6 +58,12 @@ class MixkitSource:
             return False
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
+        if filters.commercial_only:
+            # The scraper cannot tell Free-license from Restricted-License
+            # clips, so nothing it returns can pass the commercial gate.
+            _log.info("Mixkit excluded under commercial_only: licence cannot be verified per item")
+            return []
+
         import requests
         from bs4 import BeautifulSoup
 

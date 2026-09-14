@@ -45,6 +45,7 @@ from .base import Candidate, SearchFilters
 
 
 _SEARCH_URL = "https://images-api.nasa.gov/search"
+_LICENSE = "NASA Media Usage Guidelines (public domain with caveats)"
 _UNSAFE_ID_CHARS = re.compile(r"[^A-Za-z0-9._\-]+")
 
 
@@ -232,7 +233,7 @@ class NasaSource:
             height=height,
             duration=duration,
             creator=creator,
-            license="NASA Media Usage Guidelines (public domain with caveats)",
+            license=_LICENSE,
             source_tags=source_tags,
             thumbnail_url=thumbnail_url,
             extra={

@@ -42,8 +42,10 @@ class CoverrSource:
     supports = {"video": True, "image": False}
 
     def is_available(self) -> bool:
-        # Coverr works without an API key (free tier)
-        return True
+        # Verified 2026-08-31: api.coverr.co returns HTTP 401
+        # {"message":"Invalid API_KEY"} with no key. The keyless free tier
+        # described in install_instructions no longer exists.
+        return bool(os.environ.get("COVERR_API_KEY"))
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
         import requests

@@ -53,7 +53,11 @@ class LibraryOfCongressSource:
     supports = {"video": True, "image": True}
 
     def is_available(self) -> bool:
-        return True
+        # Verified 2026-08-31: www.loc.gov returns HTTP 403 (Cloudflare) to
+        # this adapter with both custom and browser User-Agents. Opt in with
+        # OPENMONTAGE_ENABLE_LOC=1 if the block is lifted for your network.
+        import os
+        return os.environ.get("OPENMONTAGE_ENABLE_LOC") == "1"
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
         import requests
@@ -127,6 +131,8 @@ class LibraryOfCongressSource:
         else:
             rights_str = str(rights).lower()
         lic = _LICENSE_PD if "public domain" in rights_str or "no known" in rights_str else _LICENSE_CHECK
+        if filters.commercial_only and lic == _LICENSE_CHECK:
+            return []
 
         # Look for downloadable resources
         resources = item.get("resources", []) or []

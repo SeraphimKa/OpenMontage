@@ -25,6 +25,8 @@ When to use corpus_builder instead
 What it does per query
 ----------------------
 1. Fan out across all available (or specified) StockSource adapters.
+   With `commercial_only` (default true) drop candidates whose licence
+   is not cleared for commercial use, counted in `license_rejected`.
 2. Download up to `clips_per_query` clips per query.
 3. Extract one thumbnail per clip via ffmpeg (for visual inspection).
 4. Return full metadata: paths, durations, sources, thumbnails.
@@ -183,6 +185,18 @@ class DirectClipSearch(BaseTool):
                 "default": True,
                 "description": "Skip download if a file with the same clip_id already exists.",
             },
+            "commercial_only": {
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "Commercial-use licence gate. When true, clips whose licence is "
+                    "non-commercial, share-alike, no-derivatives, 'verify per item' or "
+                    "unrecognised are never downloaded or returned, and scrape-only "
+                    "sources that cannot verify licence per item (mixkit, esa, jaxa) "
+                    "return nothing. Rejections are counted in license_rejected. Set "
+                    "false only for non-commercial work."
+                ),
+            },
             "timeout_seconds": {
                 "type": "number",
                 "default": 600,
@@ -249,7 +263,9 @@ class DirectClipSearch(BaseTool):
                 SearchFilters,
                 all_sources,
                 available_sources,
+                classify_license,
                 get_source,
+                is_commercially_cleared,
                 source_summary,
             )
 
@@ -260,6 +276,8 @@ class DirectClipSearch(BaseTool):
             clips_per_query = int(inputs.get("clips_per_query", 3))
             extract_thumbs = bool(inputs.get("extract_thumbnails", True))
             skip_existing = bool(inputs.get("skip_existing", True))
+            # Only an explicit false turns the gate off; null keeps it on.
+            commercial_only = inputs.get("commercial_only") is not False
             timeout_seconds = float(inputs.get("timeout_seconds", 600))
             deadline = start + timeout_seconds
 
@@ -307,10 +325,18 @@ class DirectClipSearch(BaseTool):
                     error="No stock sources available. " + self.install_instructions,
                 )
 
+            # Sources that return nothing under the gate. Reported so an
+            # empty result from them is not mistaken for "no matches".
+            excluded_by_licence_gate = [
+                s.name for s in sources
+                if commercial_only and getattr(s, "licence_gate_excluded", False)
+            ]
+
             # --- Search and download ---
             downloaded: list[dict] = []
             errors: list[dict] = []
             skipped = 0
+            license_rejected = 0
             per_source_counts: dict[str, int] = {s.name: 0 for s in sources}
             queries_started = 0
 
@@ -338,6 +364,9 @@ class DirectClipSearch(BaseTool):
                         "clips_downloaded": len([d for d in downloaded if not d.get("skipped_existing")]),
                         "clips_reused": skipped,
                         "total_clips": len(downloaded),
+                        "license_rejected": license_rejected,
+                        "commercial_only": commercial_only,
+                        "excluded_by_licence_gate": excluded_by_licence_gate,
                         "per_source_counts": per_source_counts,
                         "queries_run": queries_started,
                         "resolved_sources": [s.name for s in sources],
@@ -370,6 +399,7 @@ class DirectClipSearch(BaseTool):
                     max_duration=filters_in.get("max_duration"),
                     orientation=filters_in.get("orientation"),
                     min_width=filters_in.get("min_width"),
+                    commercial_only=commercial_only,
                 )
 
                 for src in sources:
@@ -392,6 +422,16 @@ class DirectClipSearch(BaseTool):
                             "error": f"{type(e).__name__}: {e}",
                         })
                         continue
+
+                    if commercial_only:
+                        # Central gate: adapters filter where they can, but
+                        # this is the check that holds when one does not.
+                        cleared = [
+                            c for c in candidates
+                            if is_commercially_cleared(getattr(c, "license", ""))
+                        ]
+                        license_rejected += len(candidates) - len(cleared)
+                        candidates = cleared
 
                     for cand in candidates:
                         if timed_out():
@@ -429,6 +469,7 @@ class DirectClipSearch(BaseTool):
                                 "height": cand.height,
                                 "creator": cand.creator,
                                 "license": cand.license,
+                                "license_class": classify_license(cand.license),
                                 "source_tags": cand.source_tags,
                                 "skipped_existing": True,
                             })
@@ -484,6 +525,7 @@ class DirectClipSearch(BaseTool):
                             "height": cand.height,
                             "creator": cand.creator,
                             "license": cand.license,
+                            "license_class": classify_license(cand.license),
                             "source_tags": cand.source_tags,
                             "skipped_existing": False,
                         }
@@ -528,6 +570,9 @@ class DirectClipSearch(BaseTool):
                     "clips_downloaded": len([d for d in downloaded if not d.get("skipped_existing")]),
                     "clips_reused": skipped,
                     "total_clips": len(downloaded),
+                    "license_rejected": license_rejected,
+                    "commercial_only": commercial_only,
+                    "excluded_by_licence_gate": excluded_by_licence_gate,
                     "per_source_counts": per_source_counts,
                     "queries_run": queries_started,
                     "resolved_sources": [s.name for s in sources],

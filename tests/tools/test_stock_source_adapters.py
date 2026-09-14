@@ -201,7 +201,7 @@ def test_search_propagates_transport_errors(source_name, monkeypatch):
 
     with pytest.raises(TransportError):
         get_source(source_name).search(
-            "ocean waves", SearchFilters(kind="any", per_page=5)
+            "ocean waves", SearchFilters(kind="any", per_page=5, commercial_only=False)
         )
 
 
@@ -215,7 +215,7 @@ def test_search_returns_empty_when_the_source_has_no_results(
 
     assert (
         get_source(source_name).search(
-            "ocean waves", SearchFilters(kind="any", per_page=5)
+            "ocean waves", SearchFilters(kind="any", per_page=5, commercial_only=False)
         )
         == []
     )

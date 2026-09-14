@@ -9,7 +9,10 @@ on disk and never touches sources directly.
 What it does, per query, per source, per candidate
 ---------------------------------------------------
 1. Call `source.search(query, filters)` to get a flat list of
-   `Candidate`s normalised across sources.
+   `Candidate`s normalised across sources. With `commercial_only`
+   (default true) drop any candidate whose licence is not cleared for
+   commercial use (`stock_sources.is_commercially_cleared`) and count
+   it in `license_rejected`.
 2. Skip candidates whose `clip_id` is already in the corpus (unless
    `skip_existing=false`).
 3. Download the file to ``<corpus_dir>/clips/<clip_id>.<ext>``.
@@ -177,6 +180,18 @@ class CorpusBuilder(BaseTool):
                 "description": "Halt after this many NEW rows have been added.",
             },
             "skip_existing": {"type": "boolean", "default": True},
+            "commercial_only": {
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "Commercial-use licence gate. When true, clips whose licence is "
+                    "non-commercial, share-alike, no-derivatives, 'verify per item' or "
+                    "unrecognised never enter the corpus, and scrape-only sources that "
+                    "cannot verify licence per item (mixkit, esa, jaxa) return nothing. "
+                    "Rejections are counted in license_rejected. Set false only for "
+                    "non-commercial work."
+                ),
+            },
             "thumbs_per_video": {
                 "type": "integer",
                 "default": 5,
@@ -246,6 +261,7 @@ class CorpusBuilder(BaseTool):
                 all_sources,
                 available_sources,
                 get_source,
+                is_commercially_cleared,
                 source_summary,
             )
 
@@ -255,6 +271,8 @@ class CorpusBuilder(BaseTool):
             filters_in: dict = inputs.get("filters") or {}
             max_new = int(inputs.get("max_new_clips", 100))
             skip_existing = bool(inputs.get("skip_existing", True))
+            # Only an explicit false turns the gate off; null keeps it on.
+            commercial_only = inputs.get("commercial_only") is not False
             thumbs_per_video = int(inputs.get("thumbs_per_video", 5))
 
             # Resolve sources. If the caller passed an explicit list we
@@ -298,6 +316,13 @@ class CorpusBuilder(BaseTool):
                     error="No stock sources available. " + self.install_instructions,
                 )
 
+            # Sources that return nothing under the gate. Reported so an
+            # empty result from them is not mistaken for "no matches".
+            excluded_by_licence_gate = [
+                s.name for s in sources
+                if commercial_only and getattr(s, "licence_gate_excluded", False)
+            ]
+
             corp = Corpus(corpus_dir)
             corp.load()
             corp.ensure_dirs()
@@ -316,6 +341,7 @@ class CorpusBuilder(BaseTool):
             skipped = 0
             failed = 0
             candidates_seen = 0
+            license_rejected = 0
 
             def filters_for(q_spec: dict) -> SearchFilters:
                 return SearchFilters(
@@ -325,6 +351,7 @@ class CorpusBuilder(BaseTool):
                     max_duration=filters_in.get("max_duration"),
                     orientation=filters_in.get("orientation"),
                     min_width=filters_in.get("min_width"),
+                    commercial_only=commercial_only,
                 )
 
             for q_spec in queries:
@@ -348,6 +375,15 @@ class CorpusBuilder(BaseTool):
                         continue
 
                     candidates_seen += len(cands)
+                    if commercial_only:
+                        # Central gate: adapters filter where they can, but
+                        # this is the check that holds when one does not.
+                        cleared = [
+                            c for c in cands
+                            if is_commercially_cleared(getattr(c, "license", ""))
+                        ]
+                        license_rejected += len(cands) - len(cleared)
+                        cands = cleared
                     for cand in cands:
                         if len(added_ids) >= max_new:
                             break
@@ -426,6 +462,9 @@ class CorpusBuilder(BaseTool):
                         "clips_added": 0,
                         "clips_skipped_existing": skipped,
                         "clips_failed": failed,
+                        "license_rejected": license_rejected,
+                        "commercial_only": commercial_only,
+                        "excluded_by_licence_gate": excluded_by_licence_gate,
                         "total_corpus_size": len(corp),
                         "errors": errors[:25],
                     },
@@ -441,6 +480,9 @@ class CorpusBuilder(BaseTool):
                     "clips_added": len(added_ids),
                     "clips_skipped_existing": skipped,
                     "clips_failed": failed,
+                    "license_rejected": license_rejected,
+                    "commercial_only": commercial_only,
+                    "excluded_by_licence_gate": excluded_by_licence_gate,
                     "per_source_counts": per_source_counts,
                     "added_ids": added_ids,
                     "total_corpus_size": len(corp),
@@ -499,6 +541,7 @@ class CorpusBuilder(BaseTool):
 
         from lib.clip_embedder import embed_images, embed_texts, pool_frames
         from lib.corpus import ClipRecord
+        from tools.video.stock_sources import classify_license
 
         # Pick file extension from the URL path (sources give us
         # stable .mp4/.jpg/.png URLs) with a kind-aware fallback.
@@ -552,6 +595,7 @@ class CorpusBuilder(BaseTool):
                         "source_id": cand.source_id,
                         "source_url": cand.source_url,
                         "license": cand.license,
+                        "license_class": classify_license(cand.license),
                         "creator": cand.creator,
                         "source_tags": cand.source_tags,
                     },

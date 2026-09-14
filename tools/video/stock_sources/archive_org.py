@@ -38,7 +38,7 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
-from .base import Candidate, SearchFilters
+from .base import LICENSE_NOT_CLEARED, Candidate, SearchFilters, classify_license
 
 
 _SEARCH_URL = "https://archive.org/advancedsearch.php"
@@ -322,6 +322,15 @@ class ArchiveOrgSource:
         if not identifier:
             return None
 
+        # Licence comes from the search doc, so gate before paying for
+        # the metadata round-trip. Keeps Prelinger, home movies and
+        # explicit CC0 / CC BY licenseurls; drops "verify per item".
+        license_text = _to_text(doc.get("licenseurl")) or _license_from_collection(
+            _to_text(doc.get("collection"))
+        )
+        if filters.commercial_only and classify_license(license_text) == LICENSE_NOT_CLEARED:
+            return None
+
         try:
             r = requests.get(f"{_METADATA_URL}/{identifier}", timeout=30)
             r.raise_for_status()
@@ -385,8 +394,6 @@ class ArchiveOrgSource:
 
         creator = _to_text(doc.get("creator"))
         collection = _to_text(doc.get("collection"))
-        license_url = _to_text(doc.get("licenseurl"))
-        license_text = license_url or _license_from_collection(collection)
 
         return Candidate(
             source=self.name,

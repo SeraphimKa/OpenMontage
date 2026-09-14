@@ -19,6 +19,14 @@ Design intent
 - **Dumb by design.** No ranking, no de-dup, no filtering beyond what
   the API itself accepts. Judgment work happens after embedding, in
   the agent. Adapters just convert "API JSON" → "normalised Candidate".
+  The one exception is the **commercial-use licence gate**
+  (`SearchFilters.commercial_only`, on by default): adapters that can
+  resolve licence per item drop items that are not cleared, adapters
+  that cannot (scrapers with no per-item licence) return nothing, and
+  `corpus_builder` / `direct_clip_search` re-check every candidate with
+  `is_commercially_cleared` so an adapter that forgets cannot leak a
+  non-commercial or unverifiable clip into the corpus. Unknown licence
+  strings fail closed.
 
 Adding a new source
 -------------------
@@ -35,6 +43,7 @@ Adding a new source
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Protocol, runtime_checkable
@@ -97,6 +106,111 @@ class SearchFilters:
     min_width: Optional[int] = None         # resolution floor in pixels
     per_page: int = 20
     page: int = 1
+    # Drop items whose licence is not cleared for commercial use (see
+    # `classify_license`). Unlike the other fields this one is NOT
+    # best-effort: an adapter that cannot tell must return nothing.
+    commercial_only: bool = True
+
+
+# ----------------------------------------------------------------------
+# Licence classification
+# ----------------------------------------------------------------------
+
+LICENSE_CLEARED = "cleared"
+LICENSE_ATTRIBUTION = "attribution"
+LICENSE_NOT_CLEARED = "not_cleared"
+
+# Checked first: any of these anywhere in the string means the item is
+# not cleared, even if the same string also names a permissive licence
+# (the Mixkit and ESA strings do exactly that).
+_NOT_CLEARED_PATTERNS = tuple(re.compile(p) for p in (
+    r"non[-\s]?commercial",
+    r"\bnc\b",                      # CC BY-NC, licenses/by-nc/
+    r"share[-\s]?alike",
+    r"\bsa\b",                      # CC BY-SA, licenses/by-sa/
+    r"no[-\s]?deriv",
+    r"\bnd\b",                      # CC BY-ND, licenses/by-nd/
+    r"\bverify\b",                  # "verify per item", "verify per-file"
+    r"\beducational\b",
+    r"\bjaxa\b",
+    r"\brestricted\b",
+    r"\bnot cleared\b",
+    r"rights status varies",
+    r"all rights reserved",
+    # Use restrictions. "commercial and personal use" (Coverr) is a grant,
+    # not a restriction, hence the lookbehinds.
+    r"(?<!commercial and )(?<!commercial or )\bpersonal[-\s]use\b",
+    r"\beditorial[-\s]use\b",
+    r"\brights[-\s]?managed\b",
+))
+
+_CLEARED_PATTERNS = tuple(re.compile(p) for p in (
+    r"public[-\s]?domain",
+    r"publicdomain/(zero|mark)",
+    r"\bcc0\b",
+    r"\bcc[-\s]?zero\b",
+    r"creative commons 0\b",
+    r"\bpexels license\b",
+    r"\bpixabay content license\b",
+    r"\bcoverr license\b",
+    r"\bunsplash license\b",
+    r"\bnasa\b",
+    r"\bnara\b",
+    r"\bnoaa\b",
+    r"\bpond5 public domain\b",
+    # The per-clip name on Mixkit Free clip pages (commercial use, no
+    # attribution); the adapter's "VERIFY PER ITEM" string stays not cleared.
+    r"\bmixkit stock video free license\b",
+    r"\bprelinger\b",
+    r"archive\.org home movies",
+    r"\bno known\b",                # "no known restrictions"
+))
+
+_ATTRIBUTION_PATTERNS = tuple(re.compile(p) for p in (
+    r"\bcc[-\s]?by\b",
+    r"creativecommons\.org/licenses/by/",
+    r"creative commons attribution\b",
+    r"^attribution\b",              # Freesound / Commons short name
+    r"\bvidevo attribution license\b",
+))
+
+
+def classify_license(license_text: str) -> str:
+    """Classify a licence string for commercial use.
+
+    Returns one of ``"cleared"`` (commercial use, no attribution
+    needed), ``"attribution"`` (commercial use with credit) or
+    ``"not_cleared"``. Matching is by keyword/URL against the licence
+    strings the adapters emit. Non-commercial, share-alike,
+    no-derivatives, "verify per item" and anything unrecognised
+    (including an empty string) are ``"not_cleared"`` — the gate fails
+    closed.
+    """
+    text = " ".join(str(license_text or "").lower().split())
+    if not text:
+        return LICENSE_NOT_CLEARED
+    if any(p.search(text) for p in _NOT_CLEARED_PATTERNS):
+        return LICENSE_NOT_CLEARED
+    if any(p.search(text) for p in _CLEARED_PATTERNS):
+        return LICENSE_CLEARED
+    if any(p.search(text) for p in _ATTRIBUTION_PATTERNS):
+        return LICENSE_ATTRIBUTION
+    return LICENSE_NOT_CLEARED
+
+
+def is_commercially_cleared(license_text: str) -> bool:
+    """True when `classify_license` says cleared or attribution."""
+    return classify_license(license_text) != LICENSE_NOT_CLEARED
+
+
+def has_restrictive_license_marker(license_text: str) -> bool:
+    """True when the text explicitly restricts use (NC, SA, ND, verify...).
+
+    Distinguishes an explicit restriction from a string that is merely
+    unrecognised; `classify_license` reports both as not cleared.
+    """
+    text = " ".join(str(license_text or "").lower().split())
+    return any(p.search(text) for p in _NOT_CLEARED_PATTERNS)
 
 
 @runtime_checkable

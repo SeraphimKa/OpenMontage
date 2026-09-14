@@ -51,8 +51,11 @@ class NARASource:
     supports = {"video": True, "image": True}
 
     def is_available(self) -> bool:
-        # NARA is always available (no key required)
-        return True
+        # Verified 2026-08-31: without a key the catalog returns the SPA HTML
+        # shell with HTTP 200 (content-type: text/html), so the adapter fails
+        # with JSONDecodeError rather than erroring cleanly. Key is free:
+        # email Catalog_API@nara.gov.
+        return bool(os.environ.get("NARA_API_KEY"))
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
         import requests

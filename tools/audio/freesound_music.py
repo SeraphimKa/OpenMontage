@@ -26,6 +26,11 @@ from tools.base_tool import (
     ToolStatus,
     ToolTier,
 )
+from tools.video.stock_sources.base import classify_license, is_commercially_cleared
+
+# Freesound licence names for CC0 and CC BY. Excludes "Attribution
+# NonCommercial" and the legacy "Sampling+" licence.
+_COMMERCIAL_LICENSE_FILTER = 'license:("Creative Commons 0" OR "Attribution")'
 
 
 class FreesoundMusic(BaseTool):
@@ -93,6 +98,16 @@ class FreesoundMusic(BaseTool):
                 "type": "string",
                 "description": "File path to save the downloaded MP3",
             },
+            "commercial_only": {
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "Commercial-use licence gate. When true, only CC0 and CC BY "
+                    "(Attribution) sounds are searched; NonCommercial and Sampling+ "
+                    "sounds are excluded. The real per-sound licence is returned "
+                    "in the result. Set false only for non-commercial work."
+                ),
+            },
         },
     }
 
@@ -100,7 +115,7 @@ class FreesoundMusic(BaseTool):
         cpu_cores=1, ram_mb=256, vram_mb=0, disk_mb=50, network_required=True
     )
     retry_policy = RetryPolicy(max_retries=2, retryable_errors=["rate_limit", "timeout"])
-    idempotency_key_fields = ["query", "min_duration", "max_duration"]
+    idempotency_key_fields = ["query", "min_duration", "max_duration", "commercial_only"]
     side_effects = ["writes audio file to output_path", "calls Freesound API"]
     user_visible_verification = [
         "Listen to downloaded track for mood and quality",
@@ -126,15 +141,25 @@ class FreesoundMusic(BaseTool):
             )
 
         start = time.time()
+        # Only an explicit false turns the gate off; null keeps it on.
+        commercial_only = inputs.get("commercial_only") is not False
 
         try:
             # Step 1: Search for matching sounds
             search_result = self._search(inputs, api_key)
+            if commercial_only:
+                # The API filter already restricts licences; re-check the
+                # returned licence so an unexpected value fails closed.
+                search_result = [
+                    s for s in search_result
+                    if is_commercially_cleared(s.get("license", ""))
+                ]
             if not search_result:
+                gate_note = " (commercial_only: CC0/CC BY only)" if commercial_only else ""
                 return ToolResult(
                     success=False,
-                    error=f"No music found on Freesound for query: {inputs['query']}",
-                    data={"query": inputs["query"]},
+                    error=f"No music found on Freesound for query: {inputs['query']}{gate_note}",
+                    data={"query": inputs["query"], "commercial_only": commercial_only},
                     duration_seconds=round(time.time() - start, 2),
                 )
 
@@ -163,7 +188,10 @@ class FreesoundMusic(BaseTool):
                 "query": inputs["query"],
                 "output": str(output_path),
                 "format": "mp3",
-                "license": "Creative Commons (check individual sound license)",
+                "license": sound.get("license") or "",
+                "license_class": classify_license(sound.get("license", "")),
+                "username": sound.get("username", ""),
+                "commercial_only": commercial_only,
                 "freesound_url": f"https://freesound.org/people/{sound.get('username', '')}/sounds/{sound.get('id', '')}/",
                 "results_found": len(search_result),
             },
@@ -172,20 +200,26 @@ class FreesoundMusic(BaseTool):
             duration_seconds=round(time.time() - start, 2),
         )
 
-    def _search(self, inputs: dict[str, Any], api_key: str) -> list[dict]:
-        """Search Freesound for sounds matching the query and duration filter."""
-        query = inputs["query"]
+    def _search_params(self, inputs: dict[str, Any], api_key: str) -> dict[str, Any]:
+        """Build the Freesound text-search parameters (API v2 filter syntax)."""
         min_dur = inputs.get("min_duration", 30)
         max_dur = inputs.get("max_duration", 120)
+        search_filter = f"duration:[{min_dur} TO {max_dur}]"
+        if inputs.get("commercial_only") is not False:
+            search_filter += f" {_COMMERCIAL_LICENSE_FILTER}"
 
-        params = urllib.parse.urlencode({
-            "query": query,
-            "filter": f"duration:[{min_dur} TO {max_dur}]",
+        return {
+            "query": inputs["query"],
+            "filter": search_filter,
             "sort": "rating_desc",
-            "fields": "id,name,duration,previews,tags,avg_rating,username",
+            "fields": "id,name,duration,previews,tags,avg_rating,username,license",
             "token": api_key,
             "page_size": 15,
-        })
+        }
+
+    def _search(self, inputs: dict[str, Any], api_key: str) -> list[dict]:
+        """Search Freesound for sounds matching the query and filters."""
+        params = urllib.parse.urlencode(self._search_params(inputs, api_key))
 
         url = f"{self._BASE_URL}/search/text/?{params}"
 

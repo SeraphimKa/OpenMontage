@@ -23,7 +23,13 @@ import importlib
 import inspect
 import pkgutil
 
-from .base import Candidate, SearchFilters, StockSource
+from .base import (
+    Candidate,
+    SearchFilters,
+    StockSource,
+    classify_license,
+    is_commercially_cleared,
+)
 
 __all__ = [
     "Candidate",
@@ -31,7 +37,9 @@ __all__ = [
     "StockSource",
     "all_sources",
     "available_sources",
+    "classify_license",
     "get_source",
+    "is_commercially_cleared",
     "source_catalog",
     "source_summary",
 ]
@@ -109,6 +117,9 @@ def source_catalog() -> list[dict[str, object]]:
                 "See the source adapter docs for setup details.",
             ),
             "supports": getattr(cls, "supports", {}),
+            # True when the source returns nothing under the default
+            # commercial licence gate (SearchFilters.commercial_only).
+            "licence_gate_excluded": bool(getattr(cls, "licence_gate_excluded", False)),
         })
     return catalog
 

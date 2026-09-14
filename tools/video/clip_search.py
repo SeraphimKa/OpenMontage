@@ -21,6 +21,16 @@ Operations
 - **get**: look up one clip_id and return its full provenance dict.
 - **stats**: summary counts (rows, per-source breakdown, mean motion).
 
+Licence gate
+------------
+With `commercial_only` (default true) the three retrieval operations
+never return a row whose `license` is not commercially cleared
+(`stock_sources.is_commercially_cleared`; an empty licence is
+rejected). This covers rows added before the corpus_builder gate
+existed or with it switched off. Rejected rows are excluded at query
+time (the corpus is append-only) and counted in `license_rejected`.
+`get` still returns any row, with its `license_class`.
+
 All operations return JSON-serialisable dicts so the tool contract
 stays clean across process boundaries. ClipRecords are converted via
 `dataclasses.asdict`.
@@ -155,6 +165,18 @@ class ClipSearch(BaseTool):
             "candidate_ids": {"type": "array", "items": {"type": "string"}},
             # get
             "clip_id": {"type": "string"},
+            "commercial_only": {
+                "type": "boolean",
+                "default": True,
+                "description": (
+                    "Commercial-use licence gate. When true, rank_for_slot, "
+                    "find_similar_set and diversify never return a clip whose licence "
+                    "is non-commercial, share-alike, 'verify per item', empty or "
+                    "unrecognised; excluded rows are counted in license_rejected. "
+                    "get still returns the row with its license_class. Set false only "
+                    "for non-commercial work."
+                ),
+            },
         },
     }
 
@@ -191,17 +213,24 @@ class ClipSearch(BaseTool):
             operation = inputs["operation"]
             corpus_dir = Path(inputs["corpus_dir"])
 
+            # Only an explicit false turns the gate off; null keeps it on.
+            commercial_only = inputs.get("commercial_only") is not False
+
             corp = Corpus(corpus_dir)
             corp.load()
+
+            # Computed once per call and merged into each operation's
+            # exclusions, so lib/corpus.py needs no licence awareness.
+            gate_rejected = _license_rejected_ids(corp) if commercial_only else set()
 
             if operation == "stats":
                 payload = _op_stats(corp)
             elif operation == "rank_for_slot":
-                payload = _op_rank_for_slot(corp, inputs)
+                payload = _op_rank_for_slot(corp, inputs, gate_rejected)
             elif operation == "find_similar_set":
-                payload = _op_find_similar_set(corp, inputs)
+                payload = _op_find_similar_set(corp, inputs, gate_rejected)
             elif operation == "diversify":
-                payload = _op_diversify(corp, inputs)
+                payload = _op_diversify(corp, inputs, gate_rejected)
             elif operation == "get":
                 payload = _op_get(corp, inputs)
             else:
@@ -216,6 +245,7 @@ class ClipSearch(BaseTool):
                     "operation": operation,
                     "corpus_dir": str(corpus_dir),
                     "corpus_size": len(corp),
+                    "commercial_only": commercial_only,
                     **payload,
                 },
                 duration_seconds=round(time.time() - start, 3),
@@ -234,6 +264,22 @@ class ClipSearch(BaseTool):
 # ----------------------------------------------------------------------
 
 
+def _license_rejected_ids(corp) -> set[str]:
+    """clip_ids whose stored licence is not commercially cleared.
+
+    Operations also post-filter their output against this set: a blank
+    line in index.jsonl desyncs `Corpus._id_to_row` from `records` (see
+    the `enumerate` in `lib/corpus.py` `Corpus.load`), so the corpus can
+    return a different row than the id it was given.
+    """
+    from tools.video.stock_sources import is_commercially_cleared
+
+    return {
+        rec.clip_id for rec in corp.records
+        if not is_commercially_cleared(rec.license)
+    }
+
+
 def _op_stats(corp) -> dict[str, Any]:
     """Summary counts and per-source breakdown.
 
@@ -243,22 +289,28 @@ def _op_stats(corp) -> dict[str, Any]:
     """
     import numpy as np
 
+    from tools.video.stock_sources import classify_license
+
     if len(corp) == 0:
         return {
             "rows": 0,
             "per_source": {},
             "per_kind": {},
+            "per_license_class": {},
             "mean_motion_score": 0.0,
             "mean_duration": 0.0,
         }
 
     per_source: dict[str, int] = {}
     per_kind: dict[str, int] = {}
+    per_license_class: dict[str, int] = {}
     motion_scores: list[float] = []
     durations: list[float] = []
     for rec in corp.records:
         per_source[rec.source] = per_source.get(rec.source, 0) + 1
         per_kind[rec.kind] = per_kind.get(rec.kind, 0) + 1
+        license_class = classify_license(rec.license)
+        per_license_class[license_class] = per_license_class.get(license_class, 0) + 1
         motion_scores.append(rec.motion_score)
         durations.append(rec.duration)
 
@@ -266,12 +318,15 @@ def _op_stats(corp) -> dict[str, Any]:
         "rows": len(corp),
         "per_source": per_source,
         "per_kind": per_kind,
+        "per_license_class": per_license_class,
         "mean_motion_score": float(np.mean(motion_scores)) if motion_scores else 0.0,
         "mean_duration": float(np.mean(durations)) if durations else 0.0,
     }
 
 
-def _op_rank_for_slot(corp, inputs: dict[str, Any]) -> dict[str, Any]:
+def _op_rank_for_slot(
+    corp, inputs: dict[str, Any], gate_rejected: set[str]
+) -> dict[str, Any]:
     """Embed `query_text` and return top-k clips by fused similarity.
 
     This is the agent's main retrieval move. The returned list is
@@ -286,6 +341,7 @@ def _op_rank_for_slot(corp, inputs: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("rank_for_slot requires 'query_text'")
 
     q_vec = embed_texts([query_text])[0]
+    user_exclude = set(inputs.get("exclude_ids") or [])
 
     results = corp.rank_by_text(
         query_embedding=q_vec,
@@ -293,10 +349,13 @@ def _op_rank_for_slot(corp, inputs: dict[str, Any]) -> dict[str, Any]:
         tag_weight=float(inputs.get("tag_weight", 0.3)),
         motion_min=inputs.get("motion_min"),
         kind=inputs.get("kind"),
-        exclude_ids=inputs.get("exclude_ids") or [],
+        exclude_ids=user_exclude | gate_rejected,
     )
+    # Insurance against the Corpus.load row-index bug (lib/corpus.py).
+    results = [(rec, score) for rec, score in results if rec.clip_id not in gate_rejected]
     return {
         "query_text": query_text,
+        "license_rejected": len(gate_rejected - user_exclude),
         "results": [
             {"score": score, "record": asdict(rec)}
             for rec, score in results
@@ -304,21 +363,35 @@ def _op_rank_for_slot(corp, inputs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _op_find_similar_set(corp, inputs: dict[str, Any]) -> dict[str, Any]:
-    """MMR-based similar-set retrieval from one seed clip."""
+def _op_find_similar_set(
+    corp, inputs: dict[str, Any], gate_rejected: set[str]
+) -> dict[str, Any]:
+    """MMR-based similar-set retrieval from one seed clip.
+
+    The seed is only an anchor and is never returned, so a seed that
+    fails the licence gate is still usable to find cleared neighbours.
+    """
     seed = inputs.get("seed_clip_id")
     if not seed:
         raise ValueError("find_similar_set requires 'seed_clip_id'")
 
+    user_exclude = set(inputs.get("exclude_ids") or [])
     results = corp.find_similar_set(
         seed_clip_id=seed,
         n=int(inputs.get("n", 5)),
         diversity=float(inputs.get("diversity", 0.3)),
         candidate_pool=int(inputs.get("candidate_pool", 30)),
-        exclude_ids=inputs.get("exclude_ids") or [],
+        exclude_ids=user_exclude | gate_rejected,
+    )
+    # Insurance against the Corpus.load row-index bug (lib/corpus.py).
+    results = [(rec, score) for rec, score in results if rec.clip_id not in gate_rejected]
+    # An unknown seed returns nothing, so nothing was gated either.
+    license_rejected = (
+        len(gate_rejected - user_exclude - {seed}) if corp.get(seed) is not None else 0
     )
     return {
         "seed_clip_id": seed,
+        "license_rejected": license_rejected,
         "results": [
             {"score": score, "record": asdict(rec)}
             for rec, score in results
@@ -326,19 +399,27 @@ def _op_find_similar_set(corp, inputs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _op_diversify(corp, inputs: dict[str, Any]) -> dict[str, Any]:
+def _op_diversify(
+    corp, inputs: dict[str, Any], gate_rejected: set[str]
+) -> dict[str, Any]:
     """Pick the most mutually-dissimilar subset of a candidate list."""
     candidate_ids = inputs.get("candidate_ids") or []
     if not candidate_ids:
         raise ValueError("diversify requires 'candidate_ids'")
 
+    # Filter before diversifying: Corpus.diversify always keeps the
+    # first candidate, so a rejected id must never reach it.
+    allowed = [c for c in candidate_ids if c not in gate_rejected]
     kept = corp.diversify(
-        candidate_ids=list(candidate_ids),
+        candidate_ids=allowed,
         n=int(inputs.get("n", 5)),
         diversity=float(inputs.get("diversity", 0.5)),
     )
+    # Insurance against the Corpus.load row-index bug (lib/corpus.py).
+    kept = [clip_id for clip_id in kept if clip_id not in gate_rejected]
     return {
         "input_count": len(candidate_ids),
+        "license_rejected": len(set(candidate_ids) & gate_rejected),
         "kept_count": len(kept),
         "kept_ids": kept,
     }
@@ -350,7 +431,14 @@ def _op_get(corp, inputs: dict[str, Any]) -> dict[str, Any]:
     if not clip_id:
         raise ValueError("get requires 'clip_id'")
 
+    from tools.video.stock_sources import classify_license
+
     rec = corp.get(clip_id)
     if rec is None:
-        return {"clip_id": clip_id, "found": False, "record": None}
-    return {"clip_id": clip_id, "found": True, "record": asdict(rec)}
+        return {"clip_id": clip_id, "found": False, "record": None, "license_class": None}
+    return {
+        "clip_id": clip_id,
+        "found": True,
+        "record": asdict(rec),
+        "license_class": classify_license(rec.license),
+    }

@@ -53,7 +53,11 @@ class Pond5PublicDomainSource:
     supports = {"video": True, "image": True}
 
     def is_available(self) -> bool:
-        return True
+        # Verified 2026-08-31: pond5.com/api/v2 returns HTTP 403 and the web
+        # fallback yields 0 results. Pond5 has no self-serve public API
+        # (partner/reseller only). Opt in with OPENMONTAGE_ENABLE_POND5=1.
+        import os
+        return os.environ.get("OPENMONTAGE_ENABLE_POND5") == "1"
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
         import requests

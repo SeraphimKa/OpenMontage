@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .base import Candidate, SearchFilters
+from .base import LICENSE_NOT_CLEARED, Candidate, SearchFilters, classify_license
 
 
 _API_URL = "https://commons.wikimedia.org/w/api.php"
@@ -226,6 +226,9 @@ def _page_to_candidate(page: dict[str, Any], filters: SearchFilters) -> Candidat
     creator = _meta_value(meta, "Artist")
     license_name = _meta_value(meta, "LicenseShortName")
     usage_terms = _meta_value(meta, "UsageTerms")
+    license_text = license_name or usage_terms or _COMMONS_LICENSE
+    if filters.commercial_only and classify_license(license_text) == LICENSE_NOT_CLEARED:
+        return None
     source_tags = " ".join(part for part in (object_name, description, categories) if part).strip()
     if len(source_tags) > 500:
         source_tags = source_tags[:500]
@@ -244,7 +247,7 @@ def _page_to_candidate(page: dict[str, Any], filters: SearchFilters) -> Candidat
         height=height,
         duration=duration,
         creator=creator,
-        license=license_name or usage_terms or _COMMONS_LICENSE,
+        license=license_text,
         source_tags=source_tags,
         thumbnail_url=info.get("thumburl", "") or info.get("url", "") or "",
         extra={

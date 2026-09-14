@@ -30,7 +30,15 @@ _log = logging.getLogger(__name__)
 
 _SEARCH_URL = "https://www.esa.int/ESA_Multimedia/Search"
 _VIDEO_SEARCH_URL = "https://www.esa.int/ESA_Multimedia/Videos"
-_LICENSE = "CC BY-SA 3.0 IGO (ESA, attribution required)"
+# ESA's general terms bar commercial use ("shall not be used for a commercial
+# purpose... entertainment, advertisement, merchandising"). Only a subset (e.g.
+# ESA/Hubble, ESA/Webb) is CC BY 4.0. Per-item review required before any
+# commercial delivery; do not assume this string clears the asset.
+_LICENSE = (
+    "ESA terms - VERIFY PER ITEM. General ESA library is NOT cleared for "
+    "commercial use; only the CC-licensed subset (ESA/Hubble, ESA/Webb = "
+    "CC BY 4.0) is. Attribution required."
+)
 
 
 class ESASource:
@@ -45,6 +53,8 @@ class ESASource:
         "Requires beautifulsoup4: pip install beautifulsoup4"
     )
     supports = {"video": True, "image": True}
+    # search() returns nothing under SearchFilters.commercial_only.
+    licence_gate_excluded = True
 
     def is_available(self) -> bool:
         try:
@@ -54,6 +64,12 @@ class ESASource:
             return False
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
+        if filters.commercial_only:
+            # The scraper cannot tell the CC BY subset from the general
+            # (non-commercial) ESA library, so nothing can pass the gate.
+            _log.info("ESA excluded under commercial_only: licence cannot be verified per item")
+            return []
+
         import requests
         from bs4 import BeautifulSoup
 
