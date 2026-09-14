@@ -7,7 +7,7 @@
 # that ships with macOS, so no associative arrays, mapfile or ${var,,}.
 set -euo pipefail
 
-REPO_URL="https://github.com/calesthio/OpenMontage.git"
+REPO_URL="${OPENMONTAGE_REPO_URL:-https://github.com/SeraphimKa/OpenMontage.git}"
 CLAUDE_SETUP_URL="https://code.claude.com/docs/en/setup"
 # Verified against $CLAUDE_SETUP_URL on 2026-09-14.
 CLAUDE_INSTALL_CMD="curl -fsSL https://claude.ai/install.sh | bash"

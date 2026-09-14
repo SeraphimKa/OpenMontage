@@ -32,7 +32,7 @@ it like a password.
 Open Terminal, paste this whole line, and press Return:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/calesthio/OpenMontage/main/scripts/bootstrap-mac.sh)" bootstrap --env ~/Downloads/openmontage.env
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/SeraphimKa/OpenMontage/main/scripts/bootstrap-mac.sh)" bootstrap --env ~/Downloads/openmontage.env
 ```
 
 This installs the tools OpenMontage needs, downloads OpenMontage into an
