@@ -10,6 +10,10 @@ Seedance 2.5 extends the Seedance 2 family to 4–30 second 480p/720p clips and
 larger multimodal reference sets. It is hosted; there are no local model
 weights in OpenMontage.
 
+For a client deliverable or any brief with a numbered shot list, run the process in
+`open-montage/SKILL.md` around this grammar: contract each shot, anchor with references,
+one shot per generation, score the clip against the contract before presenting it.
+
 ## Choose a supported route
 
 | Route | Tool call | Notes |
