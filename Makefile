@@ -9,7 +9,7 @@ UV_PYTHON_LABEL = $(if $(filter command line,$(origin BASE_PYTHON)),$(BASE_PYTHO
 
 .DEFAULT_GOAL := setup
 
-.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight piper-voice demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv
+.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight piper-voice demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv shot shot-go shot-sheet prompt-lint assemble cut-sheet
 
 # ---- Virtual environment ----
 
@@ -96,6 +96,34 @@ test: ensure-venv
 
 test-contracts: ensure-venv
 	$(RUN_PYTHON) -m pytest tests/contracts/ -v
+
+# ---- open-montage shots ----
+# One contracted shot at a time, from projects/$(PROJECT)/artifacts/shot_contract.json.
+# `make shot` only plans and prices; nothing is spent until `make shot-go`.
+
+shot: ensure-venv
+	@test -n "$(PROJECT)" -a -n "$(SHOT)" || { echo "usage: make shot PROJECT=<id> SHOT=<shot_id>"; exit 1; }
+	$(RUN_PYTHON) scripts/om_shot.py $(PROJECT) $(SHOT)
+
+shot-go: ensure-venv
+	@test -n "$(PROJECT)" -a -n "$(SHOT)" || { echo "usage: make shot-go PROJECT=<id> SHOT=<shot_id>"; exit 1; }
+	$(RUN_PYTHON) scripts/om_shot.py $(PROJECT) $(SHOT) --go
+
+shot-sheet: ensure-venv
+	@test -n "$(PROJECT)" -a -n "$(SHOT)" || { echo "usage: make shot-sheet PROJECT=<id> SHOT=<shot_id>"; exit 1; }
+	$(RUN_PYTHON) scripts/om_shot.py $(PROJECT) $(SHOT) --sheet
+
+prompt-lint: ensure-venv
+	@test -n "$(PROJECT)" || { echo "usage: make prompt-lint PROJECT=<id>"; exit 1; }
+	$(RUN_PYTHON) scripts/om_prompt_lint.py lint $(PROJECT)
+
+assemble: ensure-venv
+	@test -n "$(PROJECT)" || { echo "usage: make assemble PROJECT=<id> [GRADE=amber-blue-night|none]"; exit 1; }
+	$(RUN_PYTHON) scripts/om_assemble.py $(PROJECT) $(if $(GRADE),--grade $(GRADE),)
+
+cut-sheet: ensure-venv
+	@test -n "$(PROJECT)" || { echo "usage: make cut-sheet PROJECT=<id>"; exit 1; }
+	$(RUN_PYTHON) scripts/om_assemble.py $(PROJECT) --sheet
 
 # ---- Utilities ----
 

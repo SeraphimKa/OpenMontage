@@ -70,6 +70,11 @@ GLOBAL STYLE
   Genre, color grade, film stock or digital look, aspect ratio, shutter behavior,
   and anything that must not appear. Everything below must match this.
 
+REFERENCE USE
+  Only when reference images are attached. What each image shows, and what differs
+  in this shot: a person who is in the prompt but in none of the images needs their
+  state from the first frame stated here, or the references win the opening.
+
 SCENE
   A one-line logline: what happens, where, in what mood.
 
@@ -158,6 +163,14 @@ crumbles to ash" is enforceable.
 ## Assets
 
 The piece is won or lost here, before any video generates.
+
+**Faces on the Ark route.** `seedance_ark` refuses reference images and videos that
+contain a real-looking face. Three things are accepted: a preset digital character or an
+authorised real-person asset, both passed as `asset://<asset_id>`, and a face-bearing
+output of the same Ark account less than 30 days old (a Seedance 2.0 or 2.5 video, its
+returned last frame, or a Seedream 5.0 lite text-to-image). Build the sheet below that
+way; "People on the Ark route" in `open-montage/SKILL.md` has the procedure. Other
+routes apply their own rules.
 
 **Character sheet: three plates, face on only one.** Full body front with the face
 removed, full body back, and a 3/4 close-up carrying the face in two versions, smiling and
