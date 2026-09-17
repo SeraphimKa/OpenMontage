@@ -61,6 +61,42 @@ class TestContract:
             "mini": "doubao-seedance-2-0-mini-260615",
         }
 
+    def test_international_byteplus_host_uses_dreamina_model_ids(self, monkeypatch):
+        monkeypatch.setenv(
+            "ARK_BASE_URL", "https://ark.ap-southeast.bytepluses.com/api/v3"
+        )
+        monkeypatch.delenv("ARK_SEEDANCE_MODEL", raising=False)
+        tool = SeedanceArkVideo()
+        assert tool._resolve_model({"model_variant": "2.5"}) == (
+            "dreamina-seedance-2-5-260628",
+            "2.5",
+        )
+        assert tool._resolve_model({"model_variant": "standard"}) == (
+            "dreamina-seedance-2-0-260128",
+            "standard",
+        )
+        # An explicit international ID keeps its variant (and the 30 s ceiling)
+        # regardless of host.
+        monkeypatch.delenv("ARK_BASE_URL", raising=False)
+        assert tool._resolve_model({"model": "dreamina-seedance-2-5-260628"}) == (
+            "dreamina-seedance-2-5-260628",
+            "2.5",
+        )
+        payload = tool._build_payload(
+            {
+                "prompt": "x",
+                "model": "dreamina-seedance-2-5-260628",
+                "duration": 30,
+                "resolution": "720p",
+            }
+        )
+        assert payload["duration"] == 30
+        # Mainland default is unchanged.
+        assert tool._resolve_model({"model_variant": "2.5"}) == (
+            "doubao-seedance-2-5-260628",
+            "2.5",
+        )
+
     def test_seedance_25_contract_and_limits(self):
         tool = SeedanceArkVideo()
         payload = tool._build_payload(

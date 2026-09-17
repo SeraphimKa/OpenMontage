@@ -56,6 +56,13 @@ class SeedanceArkVideo(BaseTool):
         "fast": "doubao-seedance-2-0-fast-260128",
         "mini": "doubao-seedance-2-0-mini-260615",
     }
+    # BytePlus ModelArk (international, e.g. ark.ap-southeast.bytepluses.com)
+    # publishes the same models under a "dreamina-" prefix instead of "doubao-".
+    INTERNATIONAL_MODEL_IDS = {
+        variant: "dreamina-" + model_id.removeprefix("doubao-")
+        for variant, model_id in MODEL_IDS.items()
+    }
+    INTERNATIONAL_HOST_SUFFIX = ".bytepluses.com"
     TASK_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$")
     TERMINAL_STATUSES = frozenset({"succeeded", "failed", "cancelled", "expired"})
     IMAGE_SUFFIX_TO_MIME = {
@@ -906,6 +913,13 @@ class SeedanceArkVideo(BaseTool):
         self._validate_request_size(payload)
         return payload
 
+    def _default_model_ids(self) -> dict[str, str]:
+        """Pick the model-ID table that matches the configured Ark host."""
+        host = urlsplit(self._get_base_url()).hostname or ""
+        if host.endswith(self.INTERNATIONAL_HOST_SUFFIX):
+            return self.INTERNATIONAL_MODEL_IDS
+        return self.MODEL_IDS
+
     def _resolve_model(self, inputs: dict[str, Any]) -> tuple[str, str | None]:
         variant = str(inputs.get("model_variant", "standard")).lower()
         if variant not in self.MODEL_IDS:
@@ -913,11 +927,14 @@ class SeedanceArkVideo(BaseTool):
         model = str(
             inputs.get("model")
             or os.environ.get("ARK_SEEDANCE_MODEL")
-            or self.MODEL_IDS[variant]
+            or self._default_model_ids()[variant]
         )
         if not model or any(char.isspace() for char in model):
             raise ValueError("model must be a non-empty Ark Model/Endpoint ID")
         for known_variant, known_model in self.MODEL_IDS.items():
+            if model == known_model:
+                return model, known_variant
+        for known_variant, known_model in self.INTERNATIONAL_MODEL_IDS.items():
             if model == known_model:
                 return model, known_variant
         # Endpoint IDs and future model IDs can have account-specific pricing.
