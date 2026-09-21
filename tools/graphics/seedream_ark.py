@@ -48,6 +48,9 @@ class SeedreamArkImage(BaseTool):
     determinism = Determinism.STOCHASTIC
     runtime = ToolRuntime.API
 
+    # The default model ID below exists on the BytePlus international host, so that is the
+    # default host too. seedance_ark defaults to the mainland host; ARK_BASE_URL governs
+    # both, and .env.example ships it set so the two tools never point at different countries.
     BASE_URL = "https://ark.ap-southeast.bytepluses.com/api/v3"
     DEFAULT_MODEL = "seedream-5-0-260128"
     MAX_REFERENCE_IMAGES = 10

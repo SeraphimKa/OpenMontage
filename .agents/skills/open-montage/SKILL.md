@@ -22,6 +22,12 @@ Paid calls, scoring sheets and assembly run through `make shot`, `make shot-go`,
 anything is spent, log every attempt to `artifacts/spend_log.json`, and keep a
 superseded take as `<shot>.attemptN.mp4`.
 
+Run all Python in this repo with the project's virtual environment: the `make` targets
+do it for you, and anything else is `.venv/bin/python ...` (`make setup` creates it).
+A system `python` does not carry the repo's dependencies, and one failure is misleading:
+without Pillow the Ark tool reports a healthy reference image as "unreadable or corrupt".
+Before debugging an image or an import error, check which interpreter ran.
+
 Spend the user's attention at four points: the **brief card** (conflicts between the
 brief and its own media, `person_route`, the budget), the **reference set** (Phase 3),
 the **accepted shots** (end of Phase 6) and the **final cut** with its deviations

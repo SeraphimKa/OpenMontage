@@ -16,9 +16,13 @@ after that you start it with a double-click.
 
 ## Before you start: get your `.env` file
 
-Your colleague will give you a file called `.env` (sometimes named
-`openmontage.env`). It holds the keys that unlock the paid cloud tools, so treat
-it like a password.
+The account holder will give you a file called `.env` (sometimes named
+`openmontage.env`). It holds **your own** key for the paid cloud tools: each
+person has a separate key, so spend can be seen per person and one key can be
+switched off without stopping everyone. Treat it like a password.
+
+Only ever install OpenMontage with the command in Step 1. OpenMontage has no app
+or installer download; pages that offer one are fakes and some carried malware.
 
 - Receive it **only through a password manager share** (1Password, Bitwarden or
   similar). Never by email, Slack or text message.

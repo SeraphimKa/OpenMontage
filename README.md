@@ -189,13 +189,18 @@ And when a run is done, hit **▶ REPLAY RUN** — the whole production replays 
 
 - **Python 3.10+** — [python.org](https://www.python.org/downloads/)
 - **FFmpeg** — `brew install ffmpeg` / `sudo apt install ffmpeg` / [ffmpeg.org](https://ffmpeg.org/download.html)
-- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
+- **Node.js 22+** — [nodejs.org](https://nodejs.org/)
 - **An AI coding assistant** — Claude Code, Cursor, Copilot, Windsurf, or Codex
 
 ### Install & Run
 
+> **This is the SeraphimKa team fork.** It carries the `open-montage` skill, the `make shot`
+> tooling and the Ark image tool, none of which exist upstream. Colleagues: follow
+> [docs/MAC_SETUP.md](docs/MAC_SETUP.md) or [docs/LINUX_SETUP.md](docs/LINUX_SETUP.md).
+> OpenMontage has no installer or download: anything offering one is not this project.
+
 ```bash
-git clone https://github.com/calesthio/OpenMontage.git
+git clone https://github.com/SeraphimKa/OpenMontage.git
 cd OpenMontage
 make setup
 ```

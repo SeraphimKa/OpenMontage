@@ -14,7 +14,8 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 if [ ! -f "$repo/.venv/bin/activate" ]; then
-  echo "OpenMontage is not set up yet: run $repo/scripts/bootstrap-mac.sh first."
+  echo "OpenMontage is not set up yet. On a Mac run $repo/scripts/bootstrap-mac.sh;"
+  echo "on Linux run 'make setup' in $repo (see docs/LINUX_SETUP.md)."
   exit 1
 fi
 if ! command -v claude >/dev/null 2>&1; then
