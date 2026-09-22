@@ -246,6 +246,12 @@ too, each naming the file and what it establishes. Give each entry a `priority`:
 durations), `should` for texture it mentions in passing. When unsure, `must`. The user
 sees the split on the brief card and can move entries.
 
+Size the list by what a reviewer can check, not by the brief's word count: every entry
+is re-judged in every review, so each one is minutes on every round. One entry per
+thing, never one per adjective; a NEGATIVE list becomes one entry per kind (no on-screen
+text, no music, no English), not one per word. A single-shot brief fits in about 25
+entries; past 40, merge before the card goes to the user.
+
 Two rules decide adherence more than any other:
 
 - **Literal, never figurative.** The model renders comparisons as objects. "The lens bends
@@ -281,15 +287,18 @@ instead: the prompt written here becomes the prompt of the face-sheet clip. Loca
 ### 2c. Review the prompts
 
 A clean reviewer checks each prompt against its checklist entries: every entry present,
-nothing added, nothing figurative. Fix and re-review until every prompt passes. Only then
-generate.
+nothing added, nothing figurative. Prompts are text, so use the `prompt-reviewer`
+subagent (a faster model; `clean-reviewer` is for images, clips and the cut). Independent
+items get independent reviewers launched together, one per prompt, never one after
+another. Fix and re-review until every prompt passes. Only then generate.
 
 ### 2d. Generate and review the images
 
 Generate through `image_selector` into `projects/<id>/assets/reference/<role>.png`
 (faces for Ark excepted, see above).
 A clean reviewer views each image against its prompt and checklist entries and writes
-`<role>.review.json` beside it. Then open the folder for the user:
+`<role>.review.json` beside it, one reviewer per image, all launched together. Then open
+the folder for the user:
 
 ```
 xdg-open <dir>      # Linux
@@ -306,6 +315,11 @@ because they cost different things and are reviewed differently:
 |---|---|---|
 | **Edit** | keep this image or clip, change one named thing | the capability check below; the review checks that only the named thing changed |
 | **Regeneration** | this image or clip is wrong, make it again | change exactly one thing in the prompt, or add a reference; the review is the full checklist again |
+
+A change the user named in one phrase ("a bit lighter skin", "drop the lemons") is
+applied without a prompt review: change that one thing, generate, and review the result
+once against the checklist. The prompt review exists to catch what an author adds or
+misreads, and the user has just said the words themselves.
 
 An edit exists only where a tool can take the previous result back in. Check before
 promising one, and when the check fails classify the request as a regeneration and say
@@ -397,7 +411,7 @@ Write each prompt in the seedance-2-5 section order, then per shot:
 
 Run `make prompt-lint PROJECT=<id>` until it reports 0 errors.
 
-A clean reviewer checks every prompt against its contract row and the checklist:
+A `prompt-reviewer` checks every prompt against its contract row and the checklist:
 nothing missing, nothing added, nothing figurative, references named by role. Fix and
 re-review until it passes.
 
