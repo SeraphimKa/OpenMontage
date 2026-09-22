@@ -412,6 +412,9 @@ filter's retry rule and exits 3 when the next roll is the user's decision;
 
 Scoring is a clean review of the whole clip: a 1 s contact sheet (`fps=1,tile=NxM`)
 plus a real-time watch, with the previous accepted shot's `<shot_id>_last.png` beside it
+and the `<shot_id>_audio.txt` transcript the same command writes (the contract's
+`dialogue_language` sets the transcriber's language; accent and lip-sync stay `unverified`
+until a native speaker listens),
 so `carry_over` is judged against a picture, written to `projects/<id>/artifacts/adherence/<shot_id>.json`:
 
 ```json

@@ -24,6 +24,15 @@ and stop.
    `_sheet.png`); make them with `make shot-sheet` if they are absent. For a cut,
    view the pair sheets under `artifacts/final/`. A verdict about a frame you did
    not look at is a guess, and you do not guess.
+   For every `audio` entry, and for any entry about dialogue, language or music,
+   read `<name>_audio.txt` and `<name>_audio.json` beside the sheets first
+   (`make shot-sheet` writes them: stream, loudness, silences, and an offline
+   transcript with word timings). Judge which words were spoken, in which language,
+   when, and whether anything plays where silence or room tone was asked for.
+   Accent, voice quality and lip-sync are not in that evidence: return
+   `unverified` for them with the reason, unless the parent says a native speaker
+   listened. When the audio files are absent, every audio verdict is `unverified`
+   with "no audio evidence".
 3. Give every checklist entry one verdict: `present`, `absent`, `altered`, `added`
    or `not_applicable`, with a one-line reason for anything not `present`. `added`
    marks something in the item the brief never asked for; hunt for those as hard

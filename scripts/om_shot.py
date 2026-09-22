@@ -11,6 +11,8 @@ the books, so nobody needs a throwaway runner in /tmp again:
   * a provider filter refusal is recognised, retried within the skill's limit,
     and never mistaken for a prompt defect
   * every attempt, billed or free, lands in artifacts/spend_log.json
+  * --sheet also writes <shot>_audio.json/.txt: stream, loudness, silences and an
+    offline transcript with word timings, for the reviewer who cannot listen
   * the contract's `budget_usd` and `max_attempts_per_shot` (default 3 billed
     takes) are enforced before spending: at either limit the script stops, and
     raising the limit in the contract is the user's decision
@@ -36,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
@@ -330,7 +333,7 @@ def run_shot(project_dir: Path, shot_id: str, go: bool, filter_retries: int) -> 
 
 
 def make_sheets(project_dir: Path, shot_id: str) -> int:
-    """Contact sheets and stills for a clean reviewer: the whole clip at a glance."""
+    """Contact sheets, stills and audio evidence for a clean reviewer: the whole clip at a glance."""
     clip = project_dir / "assets" / "video" / f"{shot_id}.mp4"
     if not clip.is_file():
         print(f"no clip at {clip}")
@@ -351,8 +354,94 @@ def make_sheets(project_dir: Path, shot_id: str) -> int:
     for args, name in jobs:
         subprocess.run(["ffmpeg", "-y", "-v", "error", *args, str(out / name)], check=True)
         print(f"wrote {out / name}")
+    language = None
+    try:
+        language = load_contract(project_dir).get("dialogue_language")
+    except (ContractError, OSError):
+        pass
+    evidence = audio_evidence(clip, out, shot_id, language)
+    print(f"wrote {out / (shot_id + '_audio.json')} and .txt: "
+          + ("no audio stream" if not evidence["audio_stream"] else
+             f"{len(evidence.get('segments') or [])} speech segment(s), "
+             f"language {evidence.get('language') or 'unknown'}, "
+             f"mean {evidence.get('mean_volume_db')} dB"))
     print("\nJudge the whole clip, never a single frame: watch it in real time as well.")
     return 0
+
+
+TRANSCRIBER_MODEL = "small"
+
+
+def audio_evidence(clip: Path, out: Path, shot_id: str, language: str | None = None) -> dict[str, Any]:
+    """What a reviewer who cannot listen can still know about the sound.
+
+    Writes ``<shot>_audio.json`` and a readable ``<shot>_audio.txt`` beside the
+    sheets: whether the clip has an audio stream, its loudness, silences longer
+    than a second, and an offline transcript with word timings (the repo's
+    ``transcriber``, faster-whisper). ``language`` is the ISO code the contract
+    declares as ``dialogue_language``; without it the model detects one. A
+    transcriber failure is recorded, never raised: the pictures stay useful.
+    """
+    evidence: dict[str, Any] = {"shot_id": shot_id, "clip": str(clip), "audio_stream": False}
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
+         "stream=codec_name,sample_rate,channels", "-of", "csv=p=0", str(clip)],
+        capture_output=True, text=True)
+    stream = probe.stdout.strip()
+    if stream:
+        codec, rate, channels = (stream.split(",") + ["", "", ""])[:3]
+        evidence.update({"audio_stream": True, "codec": codec, "sample_rate": rate, "channels": channels})
+        stats = subprocess.run(
+            ["ffmpeg", "-v", "info", "-i", str(clip), "-af", "volumedetect,silencedetect=n=-40dB:d=1",
+             "-f", "null", "-"], capture_output=True, text=True).stderr
+        mean = re.search(r"mean_volume: (-?[\d.]+) dB", stats)
+        peak = re.search(r"max_volume: (-?[\d.]+) dB", stats)
+        evidence["mean_volume_db"] = float(mean.group(1)) if mean else None
+        evidence["max_volume_db"] = float(peak.group(1)) if peak else None
+        evidence["silences"] = [
+            {"start": float(a), "end": float(b)}
+            for a, b in re.findall(r"silence_start: ([\d.]+)[\s\S]*?silence_end: ([\d.]+)", stats)]
+        try:
+            from tools.analysis.transcriber import Transcriber
+            result = Transcriber().execute({"input_path": str(clip), "model_size": TRANSCRIBER_MODEL,
+                                            "language": language, "output_dir": str(out)})
+            if result.success:
+                data = result.data or {}
+                evidence["language"] = data.get("language")
+                evidence["transcriber"] = {"model_size": data.get("model_size"), "device": data.get("device")}
+                evidence["segments"] = [
+                    {"start": round(float(seg.get("start", 0)), 2), "end": round(float(seg.get("end", 0)), 2),
+                     "text": (seg.get("text") or "").strip()}
+                    for seg in (data.get("segments") or []) if isinstance(seg, dict)]
+                evidence["words"] = [
+                    {"start": round(float(w.get("start", 0)), 2), "end": round(float(w.get("end", 0)), 2),
+                     "word": (w.get("word") or "").strip()}
+                    for w in (data.get("word_timestamps") or []) if isinstance(w, dict)]
+            else:
+                evidence["transcriber_error"] = result.error
+        except Exception as exc:  # the pictures are still evidence
+            evidence["transcriber_error"] = f"{type(exc).__name__}: {exc}"
+    (out / f"{shot_id}_audio.json").write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
+                                               encoding="utf-8")
+    lines = [f"AUDIO EVIDENCE {shot_id} ({clip.name})"]
+    if not evidence["audio_stream"]:
+        lines.append("no audio stream in the file")
+    else:
+        lines.append(f"stream {evidence['codec']} {evidence['sample_rate']} Hz {evidence['channels']} ch; "
+                     f"mean {evidence['mean_volume_db']} dB, peak {evidence['max_volume_db']} dB")
+        for gap in evidence["silences"]:
+            lines.append(f"silence {gap['start']:.2f}-{gap['end']:.2f} s")
+        if "transcriber_error" in evidence:
+            lines.append(f"transcript unavailable: {evidence['transcriber_error']}")
+        else:
+            lines.append(f"transcript (language {evidence.get('language')}, faster-whisper {TRANSCRIBER_MODEL}); "
+                         "read it as evidence of which words were spoken and when, not of accent or lip-sync")
+            for seg in evidence.get("segments") or []:
+                lines.append(f"{seg['start']:6.2f}-{seg['end']:6.2f}  {seg['text']}")
+            if not evidence.get("segments"):
+                lines.append("no speech recognised")
+    (out / f"{shot_id}_audio.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return evidence
 
 
 def main(argv: list[str] | None = None) -> int:
