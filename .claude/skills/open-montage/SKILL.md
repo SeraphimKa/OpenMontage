@@ -111,10 +111,10 @@ references), and add `image_selector` spend to the log by hand as an attempt wit
 
 ## The reviewer
 
-Every review in this skill is done by a **clean reviewer**: a separate agent (a Herdr
-worker under the `shephrd` policy, or a subagent) that receives only the brief, the
-checklist, the prompt or output under review, and nothing from the conversation that
-produced them. The author never reviews their own prompt or clip. A new reviewer is
+Every review in this skill is done by a **clean reviewer**: the `clean-reviewer`
+subagent in `.claude/agents/` (or a Herdr worker under the `shephrd` policy) that
+receives only the paths of the brief, the checklist, the prompt or output under review
+and the verdict file to write, and nothing from the conversation that produced them. The author never reviews their own prompt or clip. A new reviewer is
 spawned for every round; a reviewer that has seen a previous round carries its verdicts
 into the next one.
 

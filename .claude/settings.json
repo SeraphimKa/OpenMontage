@@ -1,0 +1,36 @@
+{
+  "model": "claude-opus-5",
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)"
+    ],
+    "ask": [
+      "Bash(make shot-go *)"
+    ],
+    "allow": [
+      "Bash(make shot *)",
+      "Bash(make shot-sheet *)",
+      "Bash(make prompt-lint *)",
+      "Bash(make assemble *)",
+      "Bash(make cut-sheet *)",
+      "Bash(make stop *)",
+      "Bash(make stop-ok *)",
+      "Bash(make preflight)",
+      "Bash(make test)",
+      "Bash(.venv/bin/python -m backlot *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/session_check.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

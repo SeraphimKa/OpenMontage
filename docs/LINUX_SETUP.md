@@ -75,6 +75,13 @@ Always start it this way. The script switches on the project's Python
 environment first; started any other way, tools can fail with confusing
 messages such as an image being "unreadable or corrupt".
 
+The first time, Claude Code asks whether you trust this folder. Answer yes. The
+project's own permission rules (which commands run without asking, and which
+ones ask first because they cost money) only apply after you have done that.
+
+When it starts, OpenMontage checks itself and tells you in plain words if
+anything is missing, such as ffmpeg or your key. Fix that before you start a job.
+
 ## Check it works, for free
 
 Inside OpenMontage, type:

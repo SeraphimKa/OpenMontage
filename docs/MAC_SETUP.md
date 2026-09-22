@@ -63,6 +63,13 @@ If you prefer Terminal, this does the same thing:
 If macOS says the file "cannot be opened", right-click it, choose **Open**, then
 **Open** again. You only need to do this once.
 
+The first time, Claude Code asks whether you trust this folder. Answer yes. The
+project's own permission rules (which commands run without asking, and which
+ones ask first because they cost money) only apply after you have done that.
+
+When it starts, OpenMontage checks itself and tells you in plain words if
+anything is missing, such as ffmpeg or your key. Fix that before you start a job.
+
 ## Your first videos
 
 Once it starts, paste one of these:
