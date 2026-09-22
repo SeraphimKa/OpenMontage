@@ -181,6 +181,15 @@ class TestTheWholeRun:
         for mechanical in ("script", "scene_plan", "edit", "compose"):
             assert stages[mechanical]["gated"] is False
 
+    def test_a_project_without_a_marker_gets_one(self, project):
+        """The skill's own projects predate init_project; the board needs the marker."""
+        marker = project / "project.json"
+        marker.unlink()
+        assert _run(project, "brief") == 0
+        assert json.loads(marker.read_text())["pipeline_type"] == "prompt-faithful"
+        stages = {s["name"]: s for s in load_board_state(project)["stages"]}
+        assert stages["idea"]["status"] == "awaiting_human"
+
     def test_each_stop_is_awaiting_before_it_is_approved(self, project):
         assert _run(project, "brief") == 0
         assert _checkpoint(project, "idea")["status"] == "awaiting_human"

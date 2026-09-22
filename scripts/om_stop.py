@@ -807,6 +807,21 @@ def fill_predecessors(project_dir: Path, board: dict, pipeline_type: str,
     return filled
 
 
+def _ensure_marker(project_dir: Path, board: dict, pipeline_type: str) -> None:
+    """Write project.json when the project has none.
+
+    A project the skill started by hand has a contract but no marker, and the
+    board reads the pipeline (so the stage rail and its gates) from the marker
+    alone: without it every checkpoint written here renders as pending.
+    """
+    if (project_dir / "project.json").is_file():
+        return
+    from lib.checkpoint import init_project
+    title = (board.get("brief") or {}).get("title") or project_dir.name
+    init_project(project_dir.name, title=title, pipeline_type=pipeline_type,
+                 pipeline_dir=project_dir.parent)
+
+
 def write_stop(project_dir: Path, stop: str, approve: bool,
                pipeline_type: Optional[str] = None, note: Optional[str] = None) -> int:
     from backlot.shots import load_shot_board
@@ -820,6 +835,7 @@ def write_stop(project_dir: Path, stop: str, approve: bool,
         return EXIT_BAD_INPUT
 
     resolved_pipeline = _pipeline_type(project_dir, pipeline_type)
+    _ensure_marker(project_dir, board, resolved_pipeline)
     stage, artifact_name = stop_target(stop, get_pipeline_stages(resolved_pipeline))
     try:
         artifact = build_artifact(board, project_dir, stop, resolved_pipeline,
@@ -893,7 +909,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--approve", action="store_true",
                         help="the user said yes: write the stage completed with human_approved")
     parser.add_argument("--note", help="one line from the user, kept in the checkpoint metadata")
-    parser.add_argument("--pipeline", help="pipeline type; default: project.json, else cinematic")
+    parser.add_argument("--pipeline", help=f"pipeline type; default: project.json, else {DEFAULT_PIPELINE}")
     parser.add_argument("--projects-dir", help="projects root (default: the repo's projects/)")
     args = parser.parse_args(argv)
 

@@ -1,0 +1,198 @@
+name: prompt-faithful
+version: "1.0"
+description: >
+  Literal delivery of a brief that already carries its own shot list. The client
+  supplies the shots, their framing and their actions; the job is faithfulness,
+  not invention. One generation per shot against a written shot contract, with an
+  independent reviewer scoring every output against a checklist extracted from the
+  brief. Driven by the open-montage skill.
+
+  Use this instead of `cinematic` whenever the brief names the shots. `cinematic`
+  opens at `research` and `proposal`, which exist to discover a direction and to
+  offer at least three of them. A shot-list brief has neither to discover nor to
+  offer, and those two stages cannot be satisfied honestly for it.
+category: cinematic
+stability: production
+default_checkpoint_policy: guided
+
+reference_input:
+  supported: true
+  analysis_depth: deep
+  analysis_tools:
+    - video_analyzer
+    - transcript_fetcher
+    - video_downloader
+    - scene_detect
+    - frame_sampler
+
+extensions:
+  custom_scripts: true
+  custom_playbooks: false
+  custom_skills: true
+  custom_tools: false
+
+required_skills:
+  - pipelines/prompt-faithful/idea-director
+  - pipelines/prompt-faithful/script-director
+  - pipelines/prompt-faithful/scene-director
+  - pipelines/prompt-faithful/asset-director
+  - pipelines/prompt-faithful/edit-director
+  - pipelines/prompt-faithful/compose-director
+  - pipelines/prompt-faithful/publish-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+compatible_playbooks:
+  recommended: []
+  also_works: []
+  custom_allowed: true
+
+# The four stops the open-montage skill spends the user's attention on are the
+# three gated stages below: `idea` (the brief card), `assets` (twice — the
+# reference set, then the accepted shots) and `publish` (the final cut).
+# `script`, `scene_plan`, `edit` and `compose` are mechanical projections of the
+# shot contract and the cut report, so they carry no gate of their own.
+# `scripts/om_stop.py` writes all seven from disk.
+stages:
+  - name: idea
+    skill: pipelines/prompt-faithful/idea-director
+    produces:
+      - brief
+      - decision_log
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every sentence of the brief maps to at least one checklist entry
+      - No checklist entry is a metaphor; each is a literal noun or action
+      - Conflicts between the brief and its own media are named, not resolved silently
+      - A person_route is chosen with the user before any person work
+      - budget_usd, max_attempts_per_shot and runtime_seconds are agreed
+    success_criteria:
+      - Schema-valid brief artifact
+      - artifacts/brief_checklist.json exists with a priority on every entry
+      - The user has approved the brief card
+
+  - name: script
+    skill: pipelines/prompt-faithful/script-director
+    required_artifacts_in:
+      - brief
+    produces:
+      - script
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Section order and timings match the brief's own shot list
+      - No narration is invented for a brief that asks for none
+    success_criteria:
+      - Schema-valid script artifact
+      - One section per shot, covering the whole runtime
+
+  - name: scene_plan
+    skill: pipelines/prompt-faithful/scene-director
+    required_artifacts_in:
+      - script
+    produces:
+      - scene_plan
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Every frame_contains entry is a literal noun
+      - No row asks a lens to show something outside its frame
+      - Every reference_ids cell points at an accepted file, asset ID or trusted output
+    success_criteria:
+      - Schema-valid scene_plan artifact
+      - artifacts/shot_contract.json has one row per scene
+
+  - name: assets
+    skill: pipelines/prompt-faithful/asset-director
+    required_artifacts_in:
+      - scene_plan
+    optional_artifacts_in:
+      - brief
+      - script
+    produces:
+      - asset_manifest
+    optional_tools:
+      - image_selector
+      - video_selector
+    tools_available:
+      - image_selector
+      - video_selector
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every reference file is reviewed against its prompt before the user sees it
+      - Every take is scored against the brief by a reviewer who wrote none of it
+      - An accepted shot has every must entry present, the locks held and nothing added
+      - A provider filter refusal is free and is not counted as an adherence failure
+      - Spend is inside budget_usd and no shot passed max_attempts_per_shot
+    success_criteria:
+      - Schema-valid asset_manifest artifact
+      - Every shot in the contract has an accepted take on disk
+      - artifacts/adherence/<shot>.json exists for every accepted take
+
+  - name: edit
+    skill: pipelines/prompt-faithful/edit-director
+    required_artifacts_in:
+      - scene_plan
+      - asset_manifest
+    produces:
+      - edit_decisions
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Every trim keeps the whole of its shot's required action
+      - A trim point lands on movement, never on a still pose
+      - One grade is applied to every shot alike
+    success_criteria:
+      - Schema-valid edit_decisions artifact
+      - One cut per shot in the assembled order
+
+  - name: compose
+    skill: pipelines/prompt-faithful/compose-director
+    required_artifacts_in:
+      - edit_decisions
+      - asset_manifest
+    produces:
+      - render_report
+      - final_review
+    required_tools: []
+    optional_tools:
+      - video_stitch
+      - video_trimmer
+    tools_available:
+      - video_stitch
+      - video_trimmer
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Runtime matches the contract's runtime_seconds
+      - A reviewer who saw none of the shot reviews watched the whole cut with sound
+      - Every adjacent pair holds location, wardrobe, props, light direction and state
+    success_criteria:
+      - Schema-valid render_report artifact
+      - The deliverable exists and passes ffprobe validation
+      - artifacts/final/cut_report.json and cut_review.json exist
+
+  - name: publish
+    skill: pipelines/prompt-faithful/publish-director
+    required_artifacts_in:
+      - render_report
+    optional_artifacts_in:
+      - brief
+      - final_review
+    produces:
+      - publish_log
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every absent, altered, added, jumped and unverified item is declared up front
+      - Spend is reported against budget_usd
+    success_criteria:
+      - Schema-valid publish_log artifact
+      - The user has seen the deviations before accepting the cut
