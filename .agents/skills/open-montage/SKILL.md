@@ -38,28 +38,46 @@ rule below, go to the user when they happen.
 
 ## Where this sits in the pipeline
 
-AGENT_GUIDE Rule Zero applies: this skill runs inside a pipeline (`cinematic` unless the
-brief fits another), with `init_project`, checkpoints and `decision_log` as
+AGENT_GUIDE Rule Zero applies: this skill runs inside the **`prompt-faithful`**
+pipeline, with `init_project`, checkpoints and `decision_log` as
 `skills/meta/checkpoint-protocol.md` describes. The `make` targets above are this
 skill's sanctioned way to call `seedance_ark` inside the `assets` stage. The phases land
 in the stages like this:
 
 | Stage | Phases | Gate shown to the user |
 |---|---|---|
-| `research` | none: a brief with a shot list needs no web research; record that as the stage's finding | none |
-| `proposal` | 1, plus "People on the Ark route" | the brief card: checklist, conflicts, `person_route`, `budget_usd` |
-| `script` | none: the brief's shot list is the script | covered by the brief card when pre-authorised |
-| `scene_plan` | 4 | covered by the brief card when pre-authorised |
-| `assets` | 2, 3, 5, 6 | two stops. The reference set when Phase 2d opens the folder: ask in the conversation, the stage stays `in_progress`. Then the accepted shots with their scores after Phase 6, as the stage's `awaiting_human` with its `asset_manifest` |
-| `edit`, `compose` | 7 | none; they still owe `edit_decisions` (the trims and the grade) and `render_report` |
-| `publish` | 8 | the final cut with its deviations, `awaiting_human` |
+| `idea` | 1, plus "People on the Ark route" | **stop 1**, the brief card: checklist, conflicts, `person_route`, `budget_usd` |
+| `script` | none: the brief's shot list is the script | none; derived from the contract |
+| `scene_plan` | 4 | none; the shot contract is the scene plan |
+| `assets` | 2, 3, 5, 6 | **stops 2 and 3**: the reference set when Phase 2d opens the folder, then the accepted shots with their scores after Phase 6 |
+| `edit`, `compose` | 7 | none; derived from the cut report. `compose` still owes `final_review`, which is a reviewer's judgement and is never derived |
+| `publish` | 8 | **stop 4**, the final cut with its deviations |
 
-On the brief card, ask whether the `script` and `scene_plan` gates may pass without a
-separate stop, and log a yes as a `decision_log` entry with `category:
-"approval_policy"`. Without that entry every manifest gate stops as usual. A
-pre-authorised gate is still written with `human_approved=True`. A brief that arrives as
-video also triggers the manifest's gated `sample` sub-stage. `seedance_ark` is not in the
-manifest's `tools_available` for `assets`; log the team route as a `decision_log` entry.
+Use `prompt-faithful`, not `cinematic`. `cinematic` opens at `research` and `proposal`,
+which exist to discover a direction and offer at least three of them; their artifacts
+demand web sources and three concept directions that a shot-list brief does not have,
+and inventing them to pass a schema is a defect. A brief that arrives as *video* still
+needs the reference analysis in `skills/meta/video-reference-analyst.md` first.
+
+`seedance_ark` is not in the manifest's `tools_available` for `assets`; log the team
+route as a `decision_log` entry.
+
+### Show the user the board
+
+Open the board as the production starts, `python -m backlot open <id>`, and leave it
+open. It is where the user reads the brief, the reference set, every take of every shot
+and the final cut, each under a short label: `BRIEF`, `R3`, `S2`, `S2-B`, `CUT`. The
+label scheme is in `backlot/README.md`.
+
+At each of the four stops run `make stop PROJECT=<id> STOP=brief|references|shots|cut`,
+tell the user the labels it prints, and end your turn. When they approve, run
+`make stop-ok` with the same `STOP=`. The script builds each stage's artifact from the
+contract, the spend log, the adherence files and the cut report, and writes the
+ungated stages between the stops on the way. Write `artifacts/<name>.json` yourself
+whenever you want to say more than the contract can; a file on disk always wins.
+
+Take the user's feedback by label and repeat the label back when you answer: `S2-B is
+too dark` is a shot_02 round under Phase 3's rules, `drop R4` is a reference-set change.
 
 Rounds: the guide's two-round cap governs a stage's self-review. Prompt reviews in this
 skill are free and cap at three rounds per prompt; findings left after round three are

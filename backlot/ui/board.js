@@ -4,6 +4,7 @@ import {
   STAGE_ICONS, el, fmtAgo, fmtClock, fmtDuration, fmtMoney,
   getJSON, mediaURL, subscribe, thumbURL, waveBars,
 } from "/ui/lib.js";
+import { renderShotBoard, shotBoardOwnsRenders } from "/ui/shots.js";
 
 const rawProjectPath = location.pathname.split("/p/")[1] || "";
 const projectId = decodeURIComponent(rawProjectPath);
@@ -562,6 +563,22 @@ function openNarrModal(card) {
   modal.classList.add("open");
 }
 
+// Read one long thing in place — a prompt, a reviewer's verdict, a cut report.
+// The shot board hands this to its cards so they stay free of modal plumbing.
+function openTextModal(title, body, sourcePath) {
+  modal.innerHTML = "";
+  modal.append(
+    el("span", { class: "modal-close", onclick: closeModal }, "ESC · CLOSE"),
+    el("div", { class: "modal-page" },
+      el("div", { class: "script-card", style: "cursor:default" },
+        el("div", { class: "sp-title" }, title),
+        sourcePath ? el("div", { class: "sp-meta" }, sourcePath) : null,
+        el("pre", { class: "om-pre" }, String(body || "")),
+      )),
+  );
+  modal.classList.add("open");
+}
+
 function closeModal() { modal.classList.remove("open"); }
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
@@ -1084,16 +1101,20 @@ function render() {
   // never pushes them below the fold — the column flows beside the rail.
   const storyboard = renderStoryboard(s);
   const found = renderFoundMedia(s);
-  const renders = renderRenders(s);
+  // An open-montage run has no scene plan; its brief, references, takes and
+  // final cut render from state.shots instead, and own the deliverable player.
+  const shotSections = renderShotBoard(s, openTextModal);
+  const renders = shotBoardOwnsRenders(s) ? null : renderRenders(s);
+  const sections = [storyboard, found, ...shotSections, renders];
 
   if (approvalReview || script || decisions || activity) {
-    for (const section of [storyboard, found, renders]) {
+    for (const section of sections) {
       if (section) main.append(section);
     }
     const hasAside = Boolean(decisions || activity);
     app.append(el("div", { class: `board${hasAside ? "" : " solo"}` }, main, hasAside ? aside : null));
   } else {
-    for (const section of [storyboard, found, renders]) {
+    for (const section of sections) {
       if (section) app.append(section);
     }
   }
@@ -1113,6 +1134,17 @@ function normalize(s) {
   s.media.snapshots = Array.isArray(s.media.snapshots) ? s.media.snapshots : [];
   s.media.music = Array.isArray(s.media.music) ? s.media.music : [];
   s.events = Array.isArray(s.events) ? s.events : [];
+  if (s.shots && Array.isArray(s.shots.shots)) {
+    s.shots.spend = s.shots.spend || {};
+    s.shots.references = s.shots.references || { items: [] };
+    s.shots.references.items = Array.isArray(s.shots.references.items) ? s.shots.references.items : [];
+    for (const shot of s.shots.shots) {
+      shot.takes = Array.isArray(shot.takes) ? shot.takes : [];
+      shot.reference_labels = Array.isArray(shot.reference_labels) ? shot.reference_labels : [];
+    }
+  } else {
+    s.shots = null;
+  }
   if (s.storyboard && Array.isArray(s.storyboard.scenes)) {
     for (const c of s.storyboard.scenes) {
       c.takes = Array.isArray(c.takes) ? c.takes : [];

@@ -9,7 +9,7 @@ UV_PYTHON_LABEL = $(if $(filter command line,$(origin BASE_PYTHON)),$(BASE_PYTHO
 
 .DEFAULT_GOAL := setup
 
-.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight piper-voice demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv shot shot-go shot-sheet prompt-lint assemble cut-sheet
+.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight piper-voice demo demo-list hyperframes-doctor hyperframes-warm venv ensure-venv shot shot-go shot-sheet prompt-lint assemble cut-sheet stop stop-ok
 
 # ---- Virtual environment ----
 
@@ -124,6 +124,17 @@ assemble: ensure-venv
 cut-sheet: ensure-venv
 	@test -n "$(PROJECT)" || { echo "usage: make cut-sheet PROJECT=<id>"; exit 1; }
 	$(RUN_PYTHON) scripts/om_assemble.py $(PROJECT) --sheet
+
+# The skill's four stops on the Backlot stage rail: brief, references, shots, cut.
+# `stop` writes awaiting_human and you end your turn; `stop-ok` records the approval.
+
+stop: ensure-venv
+	@test -n "$(PROJECT)" -a -n "$(STOP)" || { echo "usage: make stop PROJECT=<id> STOP=brief|references|shots|cut"; exit 1; }
+	$(RUN_PYTHON) scripts/om_stop.py $(PROJECT) $(STOP) $(if $(NOTE),--note "$(NOTE)",)
+
+stop-ok: ensure-venv
+	@test -n "$(PROJECT)" -a -n "$(STOP)" || { echo "usage: make stop-ok PROJECT=<id> STOP=brief|references|shots|cut"; exit 1; }
+	$(RUN_PYTHON) scripts/om_stop.py $(PROJECT) $(STOP) --approve $(if $(NOTE),--note "$(NOTE)",)
 
 # ---- Utilities ----
 

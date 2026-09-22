@@ -100,7 +100,8 @@ def _cached_summaries() -> list[dict]:
                     "poster": None, "live": False, "last_activity": 0,
                     "active_stage": None, "awaiting_human": False,
                     "stage_states": [], "completed_count": 0,
-                    "render_count": 0, "scene_count": 0, "error": "unreadable",
+                    "render_count": 0, "scene_count": 0, "shot_count": 0,
+                    "error": "unreadable",
                 }
             _summary_cache[entry.name] = cached
         summaries.append(cached)

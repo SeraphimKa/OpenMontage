@@ -13,6 +13,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
+from backlot.shots import load_shot_board
 from lib.events import read_events
 from lib.paths import PROJECTS_DIR, REPO_ROOT  # single source of truth (env-overridable)
 
@@ -609,6 +610,12 @@ def load_board_state(project_dir: Path) -> dict[str, Any]:
     events = read_events(project_dir, limit=250)
     storyboard = _build_storyboard(project_dir, artifacts, events)
     media = _scan_media(project_dir)
+    # open-montage runs write shot_contract.json instead of scene_plan.json;
+    # backlot.shots turns those files into the shot board (None otherwise).
+    try:
+        shot_board = load_shot_board(project_dir)
+    except Exception:
+        shot_board = None
 
     stages = _build_stage_rail(pipeline_meta, checkpoints, history)
 
@@ -622,9 +629,19 @@ def load_board_state(project_dir: Path) -> dict[str, Any]:
         total = (artifacts.get("asset_manifest") or {}).get("total_cost_usd")
         if total is not None:
             cost = {"total_spent_usd": total}
+    # An open-montage run keeps its own books in the spend log; the checkpoint
+    # cost_snapshot only exists once a stop has been written.
+    if cost is None and shot_board and shot_board["spend"]["total_usd"] is not None:
+        cost = {"total_spent_usd": shot_board["spend"]["total_usd"]}
+        if shot_board["spend"]["remaining_usd"] is not None:
+            cost["budget_remaining_usd"] = shot_board["spend"]["remaining_usd"]
 
     import time
     last_activity = _last_activity(project_dir)
+    # A take or a reference landing is the activity on a shot project — neither
+    # is a checkpoint or an artifact JSON, so fold it into the live window.
+    if shot_board and shot_board["last_activity"]:
+        last_activity = max(last_activity, shot_board["last_activity"])
     now = time.time()
 
     # Stall detection: an in_progress stage that stopped writing anything.
@@ -648,6 +665,7 @@ def load_board_state(project_dir: Path) -> dict[str, Any]:
         "stages": stages,
         "artifacts": artifacts,
         "storyboard": storyboard,
+        "shots": shot_board,
         "media": media,
         "events": events,
         "cost": cost,
@@ -680,6 +698,7 @@ def summarize_project(project_dir: Path) -> dict[str, Any]:
         "completed_count": len(done),
         "render_count": len(state["media"]["renders"]),
         "scene_count": len((state["storyboard"] or {}).get("scenes", [])),
+        "shot_count": len((state["shots"] or {}).get("shots", [])),
     }
 
 
@@ -709,6 +728,7 @@ def list_projects(projects_dir: Optional[Path] = None) -> list[dict[str, Any]]:
                 "completed_count": 0,
                 "render_count": 0,
                 "scene_count": 0,
+                "shot_count": 0,
                 "error": "unreadable",
             })
     summaries.sort(key=lambda s: (not s["live"], -(s["last_activity"] or 0)))

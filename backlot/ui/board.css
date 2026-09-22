@@ -1040,3 +1040,81 @@ body:not(.first) .approval-review { animation: none; }
   .approval-review-foot button { width: 100%; }
   .approval-status { white-space: normal; }
 }
+
+/* ============================================================
+   SHOT BOARD — an open-montage run (backlot/ui/shots.js)
+   Brief, reference set, every take of every shot, the final cut.
+   Everything carries a short label the user can name in chat.
+   ============================================================ */
+
+.om-label {
+  font-family: var(--mono); font-weight: 600; font-size: calc(10px * var(--fs-scale));
+  letter-spacing: .08em; color: var(--amber); background: var(--amber-dim);
+  border: 1px solid var(--amber); border-radius: 3px; padding: 1px 6px; white-space: nowrap;
+}
+.om-label.big { font-size: calc(12px * var(--fs-scale)); padding: 2px 8px; }
+.om-label.tiny { font-size: calc(9px * var(--fs-scale)); padding: 0 4px; margin-right: 3px; }
+.om-label.ok { color: var(--green); background: var(--green-dim); border-color: var(--green); }
+
+.om-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  padding: 16px 18px; margin-bottom: 16px;
+}
+.om-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.om-head h3 {
+  margin: 0; font-size: calc(14px * var(--fs-scale)); font-weight: 600; color: var(--text);
+}
+.om-lead {
+  margin: 8px 0 0; font-size: calc(12.5px * var(--fs-scale)); line-height: 1.55; color: var(--text-2);
+}
+.om-sub {
+  font-family: var(--mono); font-size: calc(9.5px * var(--fs-scale)); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); margin: 14px 0 6px;
+}
+.om-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+
+.om-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.om-btn {
+  font-family: var(--mono); font-size: calc(9.5px * var(--fs-scale)); letter-spacing: .1em;
+  color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 3px; padding: 5px 10px; cursor: pointer;
+}
+.om-btn:hover, .om-btn:focus-visible { color: var(--text); border-color: var(--amber); }
+.om-pre {
+  white-space: pre-wrap; word-break: break-word; font-family: var(--mono);
+  font-size: calc(11px * var(--fs-scale)); line-height: 1.6; color: var(--text-2); margin: 0;
+}
+
+.om-ref, .om-take {
+  flex: 0 0 auto; width: 200px; background: var(--surface-2);
+  border: 1px solid var(--border-soft); border-radius: 4px; padding: 8px;
+}
+.om-take.accepted { border-color: var(--green); }
+.om-ref .sc-slate, .om-take .sc-slate { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.om-ref-name {
+  font-family: var(--mono); font-size: calc(9.5px * var(--fs-scale)); color: var(--text-3);
+  margin-top: 6px; word-break: break-all;
+}
+.om-used { font-size: calc(10px * var(--fs-scale)); color: var(--text-2); margin-top: 5px; }
+.om-used.dim { color: var(--text-3); font-style: italic; }
+.om-note { font-size: calc(10.5px * var(--fs-scale)); color: var(--text-3); margin-top: 5px; line-height: 1.45; }
+.om-verdict {
+  font-family: var(--mono); font-size: calc(9.5px * var(--fs-scale)); letter-spacing: .05em;
+  color: var(--text-2); margin-top: 6px; line-height: 1.4;
+}
+.om-verdict.ok { color: var(--green); }
+.om-verdict.warn { color: var(--amber); }
+.om-verdict.bad { color: var(--red); }
+.om-tick {
+  font-family: var(--mono); font-size: calc(9.5px * var(--fs-scale)); letter-spacing: .08em;
+  color: var(--green);
+}
+.om-tick.pending { color: var(--text-3); }
+
+.om-shot .strip-outer { margin-top: 12px; }
+.om-shot .render-hero { margin-top: 12px; }
+
+@media (max-width: 720px) {
+  .om-ref, .om-take { width: calc(100vw - 60px); max-width: 260px; }
+  .om-card { padding: 14px; }
+}
