@@ -326,7 +326,8 @@ promising one, and when the check fails classify the request as a regeneration a
 so:
 
 - **Image edit.** `image_selector` with `generation_mode: "edit"` and the held image in
-  `image_path`. Four providers declare `image_edit`: `ark` (the team default, proven
+  `image_path`. Never for a face plate on the Ark route: the edited file loses its trust
+  and Seedance refuses it (observed 2026-09-22), so a face change is a regeneration. Four providers declare `image_edit`: `ark` (the team default, proven
   2026-09-17: only the named thing changed), `atlascloud`, `grok` and `kling_official`.
   Name one in `preferred_provider` and confirm `selected_provider` in
   the result is the one you named: an unavailable provider is replaced by the next in
@@ -513,5 +514,6 @@ complaint.
 | overhead reference plate that only reached 70 to 80° | the shot still rendered a true nadir | "a full 90 degrees straight down" in the shot line and POSITIVE LOCKS: explicit prompt text can beat a weak reference |
 | cool window key against a warm lamp, on Seedance 2.5 | the blue arrives at half strength in every clip | `grade_preset: "amber-blue-night"` at assembly |
 | the same "navy, cream and rust plaid wool blanket" in every shot's CARRY-OVER | dark and nearly colourless in shot 2, bright cream and rust in shot 3; four single-clip reviews all passed it | the Phase 7 pair sheets; a faceless crop of the prop as a reference in both shots |
+| a trusted Seedream face plate put through `seedream_ark` image edit ("lighter skin"), same account, minutes old | refused as a reference: `content[2] may contain real person`; the untouched text-to-image plate in the same request passed | an edit of a face plate is a regeneration on Ark: change the prompt, roll a new face, review it again; only a plain text-to-image or Seedance output is trusted |
 
 Add a row whenever a review fails, so the next checklist is written against it.
