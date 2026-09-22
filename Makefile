@@ -136,6 +136,12 @@ stop-ok: ensure-venv
 	@test -n "$(PROJECT)" -a -n "$(STOP)" || { echo "usage: make stop-ok PROJECT=<id> STOP=brief|references|shots|cut"; exit 1; }
 	$(RUN_PYTHON) scripts/om_stop.py $(PROJECT) $(STOP) --approve $(if $(NOTE),--note "$(NOTE)",)
 
+# Month-to-date generation spend across every project on this machine, against
+# OM_MONTHLY_CAP_USD when it is set. The shot-go hook runs the same check.
+
+spend: ensure-venv
+	$(RUN_PYTHON) scripts/om_spend.py $(if $(MONTH),--month $(MONTH),)
+
 # ---- Utilities ----
 
 piper-voice: ensure-venv

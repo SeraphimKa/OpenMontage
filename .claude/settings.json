@@ -3,7 +3,7 @@
   "permissions": {
     "deny": [
       "Read(.env)",
-      "Read(.env.*)"
+      "Read(.env.local)"
     ],
     "ask": [
       "Bash(make shot-go *)"
@@ -18,7 +18,8 @@
       "Bash(make stop-ok *)",
       "Bash(make preflight)",
       "Bash(make test)",
-      "Bash(.venv/bin/python -m backlot *)"
+      "Bash(.venv/bin/python -m backlot *)",
+      "Bash(make spend)"
     ]
   },
   "hooks": {
@@ -28,6 +29,17 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/session_check.sh\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/spend_gate.sh\""
           }
         ]
       }

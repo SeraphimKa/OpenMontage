@@ -109,6 +109,8 @@ references), and add `image_selector` spend to the log by hand as an attempt wit
   the user with both readings; the author never rescores.
 - A filter refusal is free and counts toward neither the attempt cap nor "failed twice".
 
+Beyond the contract's `budget_usd`, this machine may carry a monthly ceiling, `OM_MONTHLY_CAP_USD` in `.env`: a hook refuses `make shot-go` once the month's logged spend across every project reaches it. `make spend` shows where the month stands. When the hook refuses, tell the user the figures and stop; the cap is theirs to raise.
+
 ## The reviewer
 
 Every review in this skill is done by a **clean reviewer**: the `clean-reviewer`
