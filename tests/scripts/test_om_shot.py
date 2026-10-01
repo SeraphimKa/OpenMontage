@@ -281,3 +281,30 @@ def test_a_finished_clip_logs_its_url_and_when_it_dies(paid):
     entry = _attempts(project)["attempts"][-1]
     assert entry["video_url"] == "https://ark.example/v.mp4"
     assert entry["urls_expire"] > entry["at"]
+
+
+def test_build_inputs_sends_reference_audio(tmp_path):
+    clip = tmp_path / "assets" / "audio" / "dialogue.wav"
+    clip.parent.mkdir(parents=True)
+    clip.write_bytes(b"wav")
+    contract = _project(tmp_path, {"id": "shot_01", "seconds": 10, "reference_ids": ["asset://face-1"],
+                                   "reference_audio_ids": ["assets/audio/dialogue.wav", "https://x.example/a.mp3"]})
+    inputs = build_inputs(contract, "shot_01", tmp_path)
+    assert inputs["reference_audio_paths"] == [str(clip)]
+    assert inputs["reference_audio_urls"] == ["https://x.example/a.mp3"]
+    assert inputs["operation"] == "reference_to_video"
+
+
+def test_build_inputs_refuses_audio_it_would_otherwise_drop(tmp_path):
+    # The tool's own key name in a contract row used to vanish without a word.
+    contract = _project(tmp_path, {"id": "shot_01", "seconds": 10, "reference_ids": ["asset://face-1"],
+                                   "reference_audio_paths": ["assets/audio/dialogue.wav"]})
+    with pytest.raises(ContractError, match="reference_audio_ids"):
+        build_inputs(contract, "shot_01", tmp_path)
+
+
+def test_build_inputs_refuses_audio_without_an_image(tmp_path):
+    contract = _project(tmp_path, {"id": "shot_01", "seconds": 10,
+                                   "reference_audio_ids": ["https://x.example/a.mp3"]})
+    with pytest.raises(ContractError, match="image or video"):
+        build_inputs(contract, "shot_01", tmp_path)

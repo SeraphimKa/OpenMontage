@@ -846,10 +846,10 @@ class SeedanceArkVideo(BaseTool):
                         f"{max_reference_seconds} seconds"
                     )
             local_audio_durations = [
-                duration
+                audio_seconds
                 for ref in audio_refs
                 if (
-                    duration := self._local_or_data_audio_duration(
+                    audio_seconds := self._local_or_data_audio_duration(
                         str(ref), max_seconds=max_reference_seconds
                     )
                 )

@@ -173,6 +173,20 @@ def build_inputs(contract: dict[str, Any], shot_id: str, project_dir: Path) -> d
         if row.get("reference_video_durations"):  # billed input; absent, the estimate assumes 15 s
             inputs["reference_video_durations"] = list(row["reference_video_durations"])
         inputs["operation"] = route["operation"]
+    # Recorded dialogue: the model lip-syncs to it instead of inventing the words.
+    # Same shape as reference_ids: project-relative files or https:// URLs.
+    for wrong in ("reference_audio_paths", "reference_audio_urls", "reference_audio"):
+        if wrong in row:
+            raise ContractError(f"{shot_id}: put reference audio in reference_audio_ids, not {wrong}")
+    if row.get("reference_audio_ids"):
+        if not (paths or urls or row.get("reference_video_urls")):
+            raise ContractError(f"{shot_id}: reference audio needs at least one reference image or video")
+        audio_paths, audio_urls = split_references(list(row["reference_audio_ids"]), project_dir)
+        if audio_paths:
+            inputs["reference_audio_paths"] = audio_paths
+        if audio_urls:
+            inputs["reference_audio_urls"] = audio_urls
+        inputs["operation"] = route["operation"]
     return inputs
 
 
@@ -231,6 +245,12 @@ def _print_plan(tool: Any, shot_id: str, inputs: dict[str, Any]) -> None:
         print(f"REFERENCE   {Path(ref).name}  ({Path(ref).stat().st_size / 1e6:.1f} MB)")
     for ref in inputs.get("reference_image_urls", []):
         print(f"REFERENCE   {ref.split('?')[0]}")
+    for ref in inputs.get("reference_video_urls", []):
+        print(f"VIDEO REF   {ref.split('?')[0]}")
+    for ref in inputs.get("reference_audio_paths", []):
+        print(f"AUDIO REF   {Path(ref).name}  ({Path(ref).stat().st_size / 1e6:.1f} MB)")
+    for ref in inputs.get("reference_audio_urls", []):
+        print(f"AUDIO REF   {ref.split('?')[0]}")
     print(f"ESTIMATE    {tool.estimate_token_usage(inputs):,} tokens = {tool.estimate_cost(inputs):.4f} USD")
 
 
