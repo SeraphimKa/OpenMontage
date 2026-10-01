@@ -19,8 +19,8 @@ Explainer proposals must lock **both** a `renderer_family` (creative grammar) an
    - **Remotion** — one line on fit (mention the React scene stack components that apply), one line on tradeoff.
    - **HyperFrames** — one line on fit (mention HTML/GSAP motion, registry blocks, kinetic typography if applicable), one line on tradeoff.
 3. Recommend one with rationale tied to the brief's `delivery_promise`, `visual_approach`, and whether word-level caption burn is required (that one forces Remotion).
-4. Wait for explicit user approval. Do NOT write `render_runtime` into `proposal_packet.production_plan` before approval.
-5. Log a `render_runtime_selection` decision in `decision_log` with BOTH runtimes (plus `ffmpeg` if it was a realistic option) in `options_considered`, the user's pick as `selected`, and the rationale as `reason`. If a runtime was unavailable, record it as rejected with `rejected_because: "runtime not available on this machine"`.
+4. Put the **recommended** runtime in `proposal_packet.production_plan.render_runtime` before validating and writing the pending proposal checkpoint. The schema requires it; `approval.status: "pending"` is a recommendation, not permission to execute. Present it and wait for explicit approval before advancing.
+5. Log a `render_runtime_selection` decision with BOTH runtimes (plus `ffmpeg` if realistic) in `options_considered` and the recommendation as `selected`. Record unavailable options as rejected with `rejected_because: "runtime not available on this machine"`. If the user chooses differently, revise and revalidate the proposal and append a new decision with the same category and subject before seeking approval. Lock the approved value downstream.
 
 Fit cheat-sheet for recommendation (input for the conversation, not an auto-decision):
 

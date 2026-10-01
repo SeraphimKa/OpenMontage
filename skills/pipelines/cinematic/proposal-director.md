@@ -17,8 +17,8 @@ Cinematic proposals must lock **both** a `renderer_family` (creative grammar: `c
    - **Remotion** — one line on fit (mention `CinematicRenderer`, `<OffthreadVideo>`, existing transition stack if applicable), one line on tradeoff.
    - **HyperFrames** — one line on fit (mention kinetic title sequences, registry shader transitions, or HTML-native typographic motion if applicable), one line on tradeoff.
 3. Recommend one with rationale tied to the brief's `delivery_promise` (especially `motion_required`), `renderer_family`, and approved tone.
-4. Wait for explicit user approval. Do NOT write `render_runtime` into `proposal_packet.production_plan` before approval.
-5. Log a `render_runtime_selection` decision in `decision_log` with BOTH runtimes in `options_considered` plus `ffmpeg` if it was a realistic option.
+4. Put the **recommended** runtime in `proposal_packet.production_plan.render_runtime` before validation and write the pending proposal checkpoint. This field is required by the schema; `approval.status: "pending"` means it is a recommendation, not consent to execute. Present the recommendation and wait for explicit user approval before advancing.
+5. Log a `render_runtime_selection` decision in `decision_log` with BOTH runtimes in `options_considered` plus `ffmpeg` if it was a realistic option. If the user changes the recommendation, revise the proposal and append a decision with the same category and subject, then revalidate and present it for approval. The approved value is locked for downstream stages.
 
 Fit cheat-sheet for the recommendation (NOT an auto-decision):
 
@@ -71,9 +71,11 @@ Before starting proposal work, check if a VideoAnalysisBrief exists for this pro
 | **Same pacing, different visual language** | Reference: handheld raw → Ours: locked-off geometric |
 | **Same color world, different lighting** | Reference: warm golden hour → Ours: warm but tungsten/interior |
 
-**Mandatory Sample Protocol:** After concept approval, produce a 10-15 second cinematic
-sample BEFORE full production. This is critical for cinematic work — mood mismatches are
-expensive to fix downstream. Present with visual + audio + music.
+**Sample protocol:** After concept and proposal approval, finish the declared script
+and scene_plan stages, then produce a 10–15 second sample inside `assets` before
+full asset production. Record its approval in the assets checkpoint's partial
+progress as described in `skills/meta/checkpoint-protocol.md`. Mood mismatches
+are expensive downstream; present the sample with visual, audio and music.
 
 **When no VideoAnalysisBrief is present:** Skip this step and proceed normally.
 
