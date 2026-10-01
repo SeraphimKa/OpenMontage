@@ -283,7 +283,12 @@ fi
 
 step "Installing OpenMontage's own dependencies (make setup)"
 info "This is the longest step: expect 5-15 minutes."
-run "$MAKE_CMD" -C "$REPO_DIR" setup "BASE_PYTHON=$PY312"
+# Makefile prefers an active venv/Conda env over .venv. Force this handoff's
+# dependencies into the project environment even when setup starts from one.
+(
+  unset VIRTUAL_ENV CONDA_PREFIX
+  run "$MAKE_CMD" -C "$REPO_DIR" setup "BASE_PYTHON=$PY312"
+)
 
 if [ "$DRY_RUN" -eq 1 ]; then
   info "[dry-run] if $PIPER_VOICE.onnx is missing, would run (in $REPO_DIR): .venv/bin/python -m piper.download_voices $PIPER_VOICE"

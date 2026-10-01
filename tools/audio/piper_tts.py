@@ -38,8 +38,12 @@ class PiperTTS(BaseTool):
         "Install Piper TTS:\n"
         "  pip install piper-tts\n"
         "Or download from https://github.com/rhasspy/piper/releases\n"
-        "Then download a voice model:\n"
-        "  piper --download-dir ~/.piper/models --model en_US-lessac-medium"
+        "Then download a voice model INTO THE REPO ROOT (piper's --data-dir\n"
+        "defaults to the current working directory, and this tool passes no\n"
+        "--data-dir, so ~/.piper/models is NOT searched):\n"
+        "  python -m piper.download_voices en_US-lessac-medium\n"
+        "NOTE: the synthesis CLI has no --download-dir flag on piper-tts 1.7+;\n"
+        "downloads live in the piper.download_voices module."
     )
     agent_skills = ["text-to-speech"]
 

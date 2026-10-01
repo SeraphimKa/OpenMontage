@@ -27,13 +27,11 @@ if ! command -v ffmpeg >/dev/null 2>&1 \
 fi
 
 if [ ! -f "$repo/.env" ]; then
-  problems+=("There is no .env file, so no video or image can be generated. Copy .env.example to .env and put your own ARK_API_KEY in it.")
-elif ! grep -Eq '^[[:space:]]*ARK_API_KEY[[:space:]]*=[[:space:]]*[^[:space:]#]' "$repo/.env"; then
-  problems+=("ARK_API_KEY is not set in .env, so no video or image can be generated. Each person uses their own key.")
+  problems+=("There is no .env file. For cloud providers, copy .env.example to .env (chmod 600 .env) and add only your own selected provider keys. Local tools may still work without keys.")
 fi
 
 if [ "${#problems[@]}" -eq 0 ]; then
-  echo "OpenMontage session check: venv, ffmpeg and ARK_API_KEY are all in place. Run Python as .venv/bin/python or through the make targets."
+  echo "OpenMontage session check: venv, ffmpeg and .env are in place. Run Python as .venv/bin/python or through the make targets. Check the tool registry's provider_menu_summary() for actual provider availability; .env presence alone does not imply a key is configured."
 else
   echo "OpenMontage session check found ${#problems[@]} problem(s). Tell the user in these words before doing anything else:"
   for p in "${problems[@]}"; do

@@ -1,7 +1,11 @@
 # Setting up OpenMontage on a Mac
 
-This guide gets OpenMontage running on your Mac. You paste two commands, and
-after that you start it with a double-click.
+**Received an OpenMontage ZIP from a colleague?** Follow `dist/MAC_AGENT_HANDOFF.md`
+inside the extracted folder instead. The command below downloads the GitHub
+version and may not match your handoff ZIP. This page is for GitHub-based setup.
+
+This guide gets the GitHub version running on your Mac. You paste two commands,
+and after that you start it with a double-click.
 
 ## What to expect
 
@@ -21,8 +25,9 @@ The account holder will give you a file called `.env` (sometimes named
 person has a separate key, so spend can be seen per person and one key can be
 switched off without stopping everyone. Treat it like a password.
 
-Only ever install OpenMontage with the command in Step 1. OpenMontage has no app
-or installer download; pages that offer one are fakes and some carried malware.
+For this GitHub-based setup, use the command in Step 1; ZIP recipients should
+use the local instructions above. OpenMontage has no separate app installer;
+verify the source of any download before running it.
 
 - Receive it **only through a password manager share** (1Password, Bitwarden or
   similar). Never by email, Slack or text message.
