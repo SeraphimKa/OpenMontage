@@ -133,7 +133,7 @@ direct_clip_search.execute({
         {"query": "satellite dish night sky",        "slot_id": "slot_03"},
         # ... one per slot
     ],
-    "sources": ["pexels", "pixabay_video", "coverr", "mixkit", "archive_org"],  # or omit for all available
+    "sources": ["pexels", "pixabay_video", "coverr", "archive_org"],  # or omit for all available
     "clips_per_query": 3,
     "filters": {
         "min_duration": 3,
@@ -148,6 +148,7 @@ direct_clip_search.execute({
 - `clips_per_query=3` is the sweet spot. Enough choice, fast download.
 - Omit `sources` to search all available providers automatically.
 - Set `skip_existing=true` (default) to avoid re-downloading on retry.
+- `commercial_only=true` (default) drops clips whose licence is non-commercial, share-alike or unverifiable (and makes mixkit/esa/jaxa return nothing); the count is in `license_rejected`, and it should only be set to `false` for non-commercial work.
 
 ### F2. Inspect Thumbnails
 
@@ -235,6 +236,10 @@ corpus_builder.execute({
 - If the brief pins a source and `corpus_builder.source_provider_menu`
   says that source is unavailable, STOP and surface it. Do not silently
   drop to the remaining sources.
+- `corpus_builder` applies the same `commercial_only` licence gate
+  (default `true`, rejections counted in `license_rejected`), so a pinned
+  scrape-only source such as mixkit, esa or jaxa contributes nothing
+  unless the brief is explicitly non-commercial.
 - Budget the corpus for 8-12x the slot count. A 15-slot montage wants
   ~150 candidates so retrieval has real choices.
 - `per_source` of 4-8 per query is usually enough. Pushing to 20+
@@ -400,6 +405,7 @@ montage-specific fields live in `metadata`:
       "format": "mp4",
       "provider": "pexels",
       "license": "Pexels License (free, no attribution required)",
+      "creator": "Jane Doe",
       "original_url": "https://www.pexels.com/video/12345",
       "subtype": "stock",
       "generation_summary": "Retrieved via CLIP rank for slot 'raindrop on asphalt slow motion...'. Score 0.38."
@@ -467,9 +473,13 @@ pick feels wrong and needs to reach for the #2 option.
 - **Using slot queries as the rank text.** Queries are search phrases
   for stock APIs; descriptions are semantic text for CLIP. They are
   different. Rank on descriptions.
-- **Losing provenance.** Every clip must carry `provider`,
-  `original_url`, and `license` in the manifest. These are the
-  non-negotiables for any downstream publishing step.
+- **Losing provenance.** Every clip must carry `provider`, `creator`,
+  `original_url`, and `license` in the manifest (copy `creator` from the
+  clip dict `direct_clip_search` / `corpus_builder` return). These are the
+  non-negotiables for any downstream publishing step, and
+  `media_license_report` builds the attribution credits from them.
+  Blank or "verify per item" licences are resolved from the source at
+  compose by `license_resolver`, not by hand.
 
 ## Retrieval Recipes
 

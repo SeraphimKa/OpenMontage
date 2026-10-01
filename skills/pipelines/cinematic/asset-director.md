@@ -68,7 +68,7 @@ If `proposal_packet.metadata.motion_required = true`, actual moving footage or g
 Before batch-generating support assets, produce one sample of each expensive generated type and show the user:
 
 1. **Generated insert sample** (if using `image_selector` or `video_selector`): Generate one representative visual. Confirm it complements the source footage before batching.
-2. **Music sample** (try `pixabay_music` first — free, searchable by mood/BPM; fall back to `freesound_music` for cues and ambience; only reach for `music_gen` when the search tools miss the brief): sample or retrieve a short clip. Confirm mood and energy match the beat plan.
+2. **Music sample** (try `pixabay_music` first — free, searchable by mood/BPM; fall back to `freesound_music` for cues and ambience; only reach for `music_gen` when the search tools miss the brief): sample or retrieve a short clip. Confirm mood and energy match the beat plan. `freesound_music` searches only CC0 and CC BY sounds by default (`commercial_only=true`) and returns each sound's real `license` and `username` for attribution.
 
 If `motion_required = true`, the representative visual must be a video clip sample, not a still image sample.
 

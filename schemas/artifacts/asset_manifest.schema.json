@@ -33,7 +33,23 @@
           "generation_summary": { "type": "string", "description": "Brief summary of how the asset was generated or sourced" },
           "provider": { "type": "string", "description": "Provider name (e.g. pixabay, google_imagen)" },
           "license": { "type": "string", "description": "License type (e.g. Pixabay License, CC0)" },
+          "creator": { "type": "string", "description": "Attribution name of the author/uploader, as returned by the source" },
+          "license_class": { "type": "string", "description": "Commercial-use class of the licence (e.g. cleared, attribution, not_cleared), as computed by the stock tools or media_license_report" },
           "original_url": { "type": "string", "description": "Source URL if downloaded from a stock service" },
+          "license_evidence": {
+            "type": "object",
+            "description": "Where license_resolver read the licence from.",
+            "required": ["url", "method", "matched_text", "fetched_at", "resolver_version"],
+            "properties": {
+              "url": { "type": "string", "description": "URL the licence was read from (API request, page, or original_url for site_policy)" },
+              "method": { "type": "string", "enum": ["api", "page", "site_policy"] },
+              "matched_text": { "type": "string", "maxLength": 300, "description": "The source text the licence was taken from" },
+              "fetched_at": { "type": "string", "description": "ISO 8601 timestamp" },
+              "resolver_version": { "type": "string" },
+              "previous_licenses": { "type": "array", "items": { "type": "string" }, "description": "Append-only history of manifest licences the source disagreed with and replaced, oldest first" }
+            },
+            "additionalProperties": false
+          },
           "voice_performance": {
             "type": "object",
             "description": "Applied voice-performance contract for narration assets.",

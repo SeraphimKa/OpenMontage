@@ -153,12 +153,16 @@ stages:
       - color_grade
       - video_trimmer
       - video_stitch
+      - license_resolver
+      - media_license_report
     tools_available:
       - video_compose
       - audio_mixer
       - color_grade
       - video_trimmer
       - video_stitch
+      - license_resolver
+      - media_license_report
     checkpoint_required: true
     human_approval_default: false
     review_focus:
@@ -170,6 +174,7 @@ stages:
       - "End-tag rendered via Remotion (MANDATORY — absence only with explicit opt-out). Default mode: overlay (ProRes 4444 with alpha composited on final scenes). Fallback: concat (opaque card appended after body)."
       - "Overlay mode: extract a frame from the overlay region and verify text is visible over footage, not over black. Concat mode: last frame must be the end-tag card."
       - No silent fallback from a motion-led promise
+      - media_licenses report emitted; no used asset is not_cleared or unknown
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation

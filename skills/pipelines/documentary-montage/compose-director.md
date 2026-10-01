@@ -326,6 +326,52 @@ Record verifications in `render_report.verification_notes`.
 }
 ```
 
+### 7b. Resolve Licences, Then Emit The Media Licence Report
+
+First run `license_resolver`, so blank and "verify per item" licences are
+settled from each asset's source rather than by hand:
+
+```python
+license_resolver.execute({"project_dir": "projects/<name>"})
+```
+
+It asks each unresolved asset's source (Commons API, archive.org metadata,
+loc.gov JSON, Freesound API, the Mixkit or ESA clip page, or the provider's
+site-wide licence) and writes `license`, `license_class`, `creator` (when
+blank) and `license_evidence` back into `artifacts/asset_manifest.json`.
+The first pre-resolver manifest is kept as `asset_manifest.json.bak`, and
+every run that changes the manifest also writes `asset_manifest.<UTC>.bak`.
+
+- `unresolved` assets keep their licence and carry a `reason`. They still
+  block delivery, so surface them with the report's blockers.
+- `skipped` entries with a reason (generated, user-supplied or
+  user-declared licences) were deliberately not checked against a source.
+- List `method: site_policy` resolutions separately when you surface the
+  result: they carry the provider's site-wide licence, and no page or API
+  was consulted for that item.
+- `errors` are fetch failures (HTTP errors, timeouts). Re-run the resolver
+  once before treating them as unresolved.
+- A `notes` entry means the source disagreed with the manifest and the
+  source value was taken. Tell the user.
+
+Then run `media_license_report` on the project after the render report:
+
+```python
+media_license_report.execute({"project_dir": "projects/<name>"})
+```
+
+It writes `artifacts/media_licenses.json` and `artifacts/media_licenses.md`,
+listing every used asset with its licence, creator, source URL and, when the
+resolver recorded it, the evidence URL.
+
+- Put every line of `attribution_credits` into the end-tag credits and the
+  video description. CC BY and similar licences are not satisfied without them.
+- If `cleared_for_delivery` is `false`, **STOP** and surface the
+  `blockers` list (and the `.md` path) to the user before any publish or
+  delivery step, unless the brief is explicitly non-commercial. Do not
+  swap clips or re-render without approval; a blocker is a rights
+  decision, not a render defect.
+
 ### 8. Quality Gate
 
 - Output file exists and plays.

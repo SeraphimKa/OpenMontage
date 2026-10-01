@@ -10,6 +10,7 @@ from tools.video.corpus_builder import CorpusBuilder
 @dataclass
 class _Candidate:
     clip_id: str
+    license: str = "CC0"  # cleared, so the commercial licence gate keeps it
 
 
 class _Source:

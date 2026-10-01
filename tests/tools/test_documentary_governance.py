@@ -234,6 +234,7 @@ def test_direct_clip_search_honors_overall_timeout(monkeypatch, tmp_path):
                     source_url="https://example.test/slow-1",
                     download_url="https://example.test/slow-1.mp4",
                     kind="video",
+                    license="CC0",
                 )
             ]
 
@@ -307,6 +308,7 @@ def test_direct_clip_search_times_out_streaming_download(monkeypatch, tmp_path):
                     source_url="https://example.test/stream-1",
                     download_url="https://example.test/stream-1.mp4",
                     kind="video",
+                    license="CC0",
                 )
             ]
 
@@ -370,6 +372,7 @@ def test_direct_clip_search_reports_downloaded_clip_when_thumbnail_times_out(
                     source_url="https://example.test/thumb-1",
                     download_url="https://example.test/thumb-1.mp4",
                     kind="video",
+                    license="CC0",
                 )
             ]
 

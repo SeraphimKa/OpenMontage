@@ -147,7 +147,7 @@ based on what footage lives where:
 | `pexels` | Modern HD footage, clean shots, people, cities, nature | Default for modern/any era |
 | `pixabay_video` | Large community library, nature, people, technology, lifestyle | Gap-fills when Pexels misses; broad general footage |
 | `coverr` | Curated cinematic B-roll, nature, urban, abstract backgrounds | High-quality establishing shots, mood-setters, modern lifestyle |
-| `mixkit` | Curated HD/4K by Envato, nature, business, technology | Premium-feel B-roll, clean nature footage, no attribution needed |
+| `mixkit` | Curated HD/4K by Envato, nature, business, technology | Premium-feel B-roll, clean nature footage; licence cannot be verified per clip (Free and Restricted/non-commercial clips mixed), so it is excluded under the default commercial gate |
 | `archive_org` | Prelinger home movies, mid-century educational film, 1940s-1980s texture | Vintage, wry, dreamlike, anything nostalgic |
 | `nara` | U.S. National Archives — WWII, Cold War, Apollo, civil rights, presidential | Historical American documentary, military, government, space race |
 | `loc` | Library of Congress — early cinema, newsreels, cultural recordings | Pre-1928 public domain footage, American history, folk traditions |
