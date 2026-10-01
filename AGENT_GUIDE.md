@@ -182,12 +182,12 @@ This applies especially to:
 
 The agent itself orchestrates the production state machine:
 
-`research -> proposal -> script -> scene_plan -> assets -> edit -> compose`
+Stage order comes from the selected `pipeline_defs/<pipeline>.yaml` manifest. Some pipelines start at `research -> proposal`; others start at `idea`. Never skip a declared stage to reuse preliminary research or concept approval.
 
 The agent:
 
 1. Reads the pipeline manifest (`pipeline_defs/*.yaml`) to know the process
-2. Calls `checkpoint.get_next_stage()` to find where to resume
+2. Calls `checkpoint.get_next_stage(PROJECTS_DIR, project_id, pipeline_type)` to find where to resume; pass the selected manifest name as `pipeline_type` so a pipeline-specific stage order is used
 3. Reads the stage's director skill (`skills/pipelines/<pipeline>/<stage>-director.md`) to know HOW
 4. Uses tools (`tools/`) for concrete capabilities
 5. Self-reviews using the reviewer meta skill (`skills/meta/reviewer.md`)
@@ -251,6 +251,7 @@ If the folder has tracks, the proposal and asset stages should present them as o
 | `clip-factory` | Many clips from one long source | beta |
 | `podcast-repurpose` | Podcast highlights and derivatives | beta |
 | `cinematic` | Trailer, teaser, and mood-led edits | production |
+| `documentary-montage` | Evidence-led documentary montage | production |
 | `prompt-faithful` | Briefs that already carry their own shot list; literal delivery via the `open-montage` skill | production |
 | `animation` | Motion-graphics and animation-first videos | production |
 | `character-animation` | Local rigged cartoon characters and reusable character acting | beta |

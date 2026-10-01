@@ -325,9 +325,22 @@ Do NOT proceed to Step 5 until all relevant Layer 3 skills are read.
 The difference between a generic prompt and a skill-informed prompt is
 the difference between "usable" and "cinematic."
 
-### Step 5: Sample-First Production (MANDATORY)
+### Step 5: Enter the Pipeline (HARD REDIRECT)
 
-After the user picks a variant, ALWAYS say:
+After the user picks a variant, select and read its manifest. The reference analysis,
+lightweight research and concept conversation above are **inputs**, not completed
+pipeline checkpoints. Start at the manifest's first stage: finish `research` if
+listed (even after Step 3b), or `idea` if that is the first stage. Produce and
+checkpoint every declared stage in order, reading each stage director first.
+The sample belongs inside `assets` after the declared proposal/idea approval,
+script and scene_plan stages; see `skills/meta/checkpoint-protocol.md` →
+"Reference-Driven Sample Approval (Within Assets)". Carry the VideoAnalysisBrief,
+selected variant and user feedback into those stages. Full asset production waits
+for sample approval; the ordinary assets gate still applies afterward.
+
+### Step 6: Sample-First Assets (Before Full Asset Production)
+
+After reaching `assets` and recording `in_progress` partial progress, say:
 
 ```
 "Great choice. Before I commit to the full [X]-second video, I'll produce a
@@ -338,8 +351,7 @@ Estimated sample cost: $[X.XX]
 Shall I proceed with the sample?"
 ```
 
-The sample is NOT optional. Even if the user says "just do the whole thing," push
-back gently:
+Recommend a sample strongly. If the user says "just do the whole thing," explain the risk once:
 
 ```
 "I'd really recommend the sample first — it's a tiny fraction of the cost and
@@ -347,47 +359,25 @@ lets us catch any style mismatches early. If you love it, I'll proceed to the
 full video immediately."
 ```
 
-Only skip the sample if the user insists after being advised.
+If the user insists after being advised, record their explicit sample decline in the `assets` partial progress before full asset generation. The manifest's normal assets gate still applies.
 
-**Sample contents:**
+**Sample contents (where relevant to the approved brief):**
 - 1-2 representative scenes (the hook + one middle scene)
-- Actual TTS narration with chosen voice
+- Actual TTS narration with chosen voice if narration was selected
 - Actual generated/stock visuals
 - Music bed snippet
 - Subtitle style preview
 
-**Sample checkpoint:**
+**Sample approval (within assets, not a separate stage):**
 Present the sample with: "Here's a preview. Does this feel right? Things I can
-adjust: voice, visual style, pacing, music, colors."
-
-Iterate on sample feedback until approved. Store samples at:
-`projects/<name>/assets/sample/sample_v{N}.mp4`
-
-### Step 6: Enter Pipeline (HARD REDIRECT)
-
-After sample approval, the agent MUST enter the pipeline. This is not optional.
-
-**Mandatory steps:**
-1. Read the pipeline manifest: `pipeline_defs/animation.yaml` (or whichever
-   pipeline matches the production type)
-2. Execute **stage by stage** in order — research → proposal → script →
-   scene_plan → assets → edit → compose → publish
-3. Before EACH stage, read its director skill from
-   `skills/pipelines/<pipeline>/<stage>-director.md`
-4. Produce the required artifacts at each stage
-5. Hit every checkpoint where `checkpoint_required: true`
-6. Get user approval where `human_approval_default: true`
-
-**Do NOT collapse stages.** Do not jump from "user approved proposal" to
-"generate all assets." The pipeline stages exist to enforce quality gates,
-artifact dependencies, and review checkpoints. Skipping them is a governance
-violation.
-
-**Context to carry into the pipeline:**
-- VideoAnalysisBrief as grounding context in the research/proposal stage
-- User's chosen variant as the approved direction
-- Sample feedback incorporated into the brief
-- All creative differentiation decisions recorded in the decision_log
+adjust: voice, visual style, pacing, music, colors." End the turn. Record
+feedback and explicit approval or decline in `checkpoint_assets.json` under
+`metadata.partial_progress` before making full assets. Iterate if requested.
+Store samples at `projects/<name>/assets/sample/sample_v{N}.mp4`.
+Do not treat early concept selection as approval of a later pipeline gate.
+Read the selected manifest for the actual stage sequence; no stage is skipped.
+Carry these inputs forward:
+- Creative differentiation decisions in the decision_log
 - Audio architecture and voice casting decisions from Step 3
 - Layer 3 skills already read from Step 4b
 

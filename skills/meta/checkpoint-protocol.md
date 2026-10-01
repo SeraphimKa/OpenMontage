@@ -168,20 +168,20 @@ When `human_approval_default: true`:
 
 ### Step 6: Determine Next Stage
 
-After checkpoint is written and approved (if needed):
+After checkpoint is written and approved (if needed), use the selected manifest's stage order:
 
 ```python
-next_stage = get_next_stage(pipeline_dir, project_name)
+next_stage = get_next_stage(pipeline_dir, project_name, pipeline_type)
 ```
 
 This reads all existing checkpoints and returns the next stage that needs to run, or `None` if the pipeline is complete.
 
 ### Step 7: Resume Protocol
 
-At the START of any pipeline run (not just after a stage), always check for existing progress:
+At the START of any pipeline run (not just after a stage), use the selected manifest name (for example, `"cinematic"` or `"prompt-faithful"`), not the default stage list:
 
 ```python
-next_stage = get_next_stage(pipeline_dir, project_name)
+next_stage = get_next_stage(pipeline_dir, project_name, pipeline_type)
 ```
 
 If `next_stage` is not the first stage:
@@ -199,23 +199,26 @@ If a checkpoint exists with status `"awaiting_human"`:
 2. Present the checkpoint data for review
 3. Wait for approval before proceeding
 
-### Sample Checkpoint (Reference-Driven Productions)
+### Reference-Driven Sample Approval (Within Assets)
 
-When a production is reference-driven (VideoAnalysisBrief exists), there is an
-additional checkpoint between proposal approval and full production:
+When a VideoAnalysisBrief exists and the user has agreed to a sample, enter the
+selected pipeline first. Complete its declared research/idea, proposal (if any),
+script and scene_plan stages and their approval gates. At the start of `assets`,
+write `checkpoint_assets.json` with `status="in_progress"` and record sample
+paths, version, costs, feedback and approval status in `metadata.partial_progress`.
+A sample is **not** a manifest stage: do not write `checkpoint_sample.json` or
+mark `assets` completed/awaiting_human merely because the sample is ready.
 
-| Stage | checkpoint_required | human_approval_default | Notes |
-|-------|--------------------|-----------------------|-------|
-| `sample` | true | true | Always requires human approval |
-
-The sample checkpoint:
-1. Presents: rendered sample clip (10-15 seconds)
-2. Cost: sample cost vs. projected full-video cost
-3. Action: approve (→ proceed to script), revise (→ re-generate sample), abort
-
-The sample checkpoint is NOT a pipeline stage — it's a sub-checkpoint within the
-proposal stage. It does not produce a canonical artifact. It produces a rendered
-preview clip stored at `projects/<name>/assets/sample/sample_v{N}.mp4`.
+Render only the approved, budgeted 10–15 second sample to
+`projects/<name>/assets/sample/sample_v{N}.mp4`. Present the clip and cost;
+**end the turn** and wait for explicit approval, revision or abort. On revision,
+update the partial progress and sample version; on approval, record the user's
+response in the partial progress (and decision log if it changes a logged choice),
+then continue full asset production. On restart, inspect that record before
+spending or producing more assets. If the user explicitly declines the sample
+after being advised, record that choice before proceeding. The manifest's normal
+`assets` gate still occurs after the canonical asset_manifest is ready; sample
+approval never substitutes for it.
 
 **Presentation format:**
 ```
