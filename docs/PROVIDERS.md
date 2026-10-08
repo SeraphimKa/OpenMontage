@@ -1113,7 +1113,7 @@ These providers run entirely on your machine. No network, no API key, no cost. S
 
 ```bash
 # Included in make setup, or install manually:
-cd remotion-composer && npm install && cd ..
+cd remotion-composer && npx --yes pnpm@10.34.6 install --frozen-lockfile && cd ..
 ```
 
 Requires **Node.js 18+** and `npx`. The `remotion-composer/` project is included in the repo.

@@ -6,6 +6,9 @@ PIP = $(RUN_PYTHON) -m pip
 # uv ignores BASE_PYTHON unless told; honour it when given on the command line.
 UV_PYTHON = $(if $(filter command line,$(origin BASE_PYTHON)),$(BASE_PYTHON),$(PYTHON_VERSION))
 UV_PYTHON_LABEL = $(if $(filter command line,$(origin BASE_PYTHON)),$(BASE_PYTHON),Python $(PYTHON_VERSION)+)
+# remotion-composer is a pnpm project. Run the pinned pnpm through npx so no global
+# install is needed and a different global pnpm cannot rewrite the lockfile.
+PNPM ?= npx --yes pnpm@10.34.6
 
 .DEFAULT_GOAL := setup
 
@@ -59,7 +62,7 @@ setup: ensure-venv
 	$(PIP) install -r requirements.txt
 	@echo ""
 	@echo "==> Installing Remotion composer..."
-	cd remotion-composer && npm install
+	cd remotion-composer && $(PNPM) install --frozen-lockfile
 	@echo ""
 	@$(MAKE) --no-print-directory piper-voice
 	@echo ""

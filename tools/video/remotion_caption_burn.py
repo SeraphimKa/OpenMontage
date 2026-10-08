@@ -61,7 +61,7 @@ class RemotionCaptionBurn(BaseTool):
 
     dependencies = ["cmd:ffmpeg", "cmd:ffprobe"]
     install_instructions = (
-        "Remotion (optional, preferred): npm install in remotion-composer/\n"
+        "Remotion (optional, preferred): npx --yes pnpm@10.34.6 install --frozen-lockfile in remotion-composer/\n"
         "FFmpeg (required for fallback): https://ffmpeg.org/download.html"
     )
     agent_skills = ["remotion-best-practices", "ffmpeg"]

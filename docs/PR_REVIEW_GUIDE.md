@@ -87,7 +87,7 @@ Check for:
 - Secret exfiltration risks, `.env` reads, token logging, or unsafe debug output
 - Shell execution, `subprocess`, dynamic imports, `eval`, `exec`, or generated
   code execution
-- Dependency additions, install scripts, package-lock churn, or broad version
+- Dependency additions, install scripts, lockfile churn, or broad version
   ranges
 - Unsafe file deletion, path traversal, archive extraction, or writes outside
   the expected project directory

@@ -24,6 +24,8 @@ ROOT_DIR = Path(__file__).resolve().parent
 COMPOSER_DIR = ROOT_DIR / "remotion-composer"
 PROPS_DIR = COMPOSER_DIR / "public" / "demo-props"
 OUTPUT_DIR = ROOT_DIR / "projects" / "demos" / "renders"
+# The pnpm that wrote remotion-composer/pnpm-lock.yaml; keep in step with the Makefile.
+PNPM_SPEC = "pnpm@10.34.6"
 
 DEMO_DESCRIPTIONS = {
     "world-in-numbers": "Global scale story with titles, stats, and charts",
@@ -50,17 +52,17 @@ def ensure_demo_environment() -> str:
     if not find_command("node", "node.exe"):
         raise SystemExit("Error: Node.js is required. Install it from https://nodejs.org/")
 
-    npm_cmd = find_command("npm.cmd", "npm", "npm.exe")
-    if not npm_cmd:
-        raise SystemExit("Error: npm is required but was not found on PATH.")
-
     npx_cmd = find_command("npx.cmd", "npx", "npx.exe")
     if not npx_cmd:
         raise SystemExit("Error: npx is required but was not found on PATH.")
 
     if not (COMPOSER_DIR / "node_modules").exists():
         print("Installing Remotion dependencies...")
-        subprocess.run([npm_cmd, "install"], cwd=COMPOSER_DIR, check=True)
+        subprocess.run(
+            [npx_cmd, "--yes", PNPM_SPEC, "install", "--frozen-lockfile"],
+            cwd=COMPOSER_DIR,
+            check=True,
+        )
 
     return npx_cmd
 

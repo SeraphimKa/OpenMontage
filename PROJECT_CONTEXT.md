@@ -55,6 +55,7 @@ Each tool's `agent_skills[]` field bridges Layer 1 → Layer 3. See `skills/INDE
 - **Reviewer** is a meta skill (`skills/meta/reviewer.md`), advisory, max 2 rounds
 - **Cost tracker** (`tools/cost_tracker.py`) manages budget: estimate -> reserve -> reconcile
 - **Canonical artifacts** validated against JSON schemas in `schemas/artifacts/`
+- **Node dependencies:** `remotion-composer/` is a pnpm project (pnpm 10.34.6, `pnpm-lock.yaml`, `pnpm-workspace.yaml`). Install with `npx --yes pnpm@10.34.6 install --frozen-lockfile` (what `make setup` runs); never add a `package-lock.json`. Declare every package the composer imports — pnpm does not hoist undeclared transitive packages. Tools still run the local Remotion CLI with `npx remotion`.
 
 ## Key Files
 

@@ -219,11 +219,11 @@ Or if you want the real-footage path:
 
 That's it. The agent researches your topic with live web search, generates AI images, writes and narrates the script with voice direction, finds royalty-free background music automatically, burns in word-level subtitles, and renders the final video. Before you see anything, the system runs a multi-point self-review — ffprobe validation, frame sampling, audio level analysis, delivery promise verification, and subtitle checks. Every provider selection is scored across 7 dimensions with an auditable decision log. Every creative decision gets your approval.
 
-> **No `make`?** macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate && python -m pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && python -m piper.download_voices en_US-lessac-medium && cp .env.example .env`
+> **No `make`?** macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate && python -m pip install -r requirements.txt && cd remotion-composer && npx --yes pnpm@10.34.6 install --frozen-lockfile && cd .. && python -m piper.download_voices en_US-lessac-medium && cp .env.example .env`
 >
-> Windows PowerShell: `py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install -r requirements.txt; cd remotion-composer; npm install; cd ..; python -m piper.download_voices en_US-lessac-medium; Copy-Item .env.example .env`
+> Windows PowerShell: `py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install -r requirements.txt; cd remotion-composer; npx --yes pnpm@10.34.6 install --frozen-lockfile; cd ..; python -m piper.download_voices en_US-lessac-medium; Copy-Item .env.example .env`
 >
-> **Windows:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
+> `remotion-composer/` is a pnpm project: `npx` runs the pinned pnpm 10.34.6, so pnpm does not need to be installed globally.
 
 ### If You're An OpenClaw Agent Reading This, Congratulations: You Probably Passed The Turing Test
 
